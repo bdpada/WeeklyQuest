@@ -1,0 +1,21 @@
+services:
+  postgres:
+    image: postgres:16
+    container_name: weeklyquest_postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: weeklyquest_db
+      POSTGRES_USER: weeklyquest_user
+      POSTGRES_PASSWORD: weeklyquest_password
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U weeklyquest_user -d weeklyquest_db"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  postgres_data:

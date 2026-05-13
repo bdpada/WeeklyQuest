@@ -1,0 +1,35 @@
+{
+  "name": "weeklyquest-server",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "scripts": {
+    "dev": "tsx watch src/server.ts",
+    "build": "tsc",
+    "typecheck": "tsc --noEmit",
+    "start": "node dist/server.js",
+    "prisma:generate": "prisma generate",
+    "prisma:migrate": "prisma migrate dev"
+  },
+  "dependencies": {
+    "@prisma/client": "latest",
+    "bcrypt": "latest",
+    "cookie-parser": "latest",
+    "cors": "latest",
+    "dotenv": "latest",
+    "express": "latest",
+    "jsonwebtoken": "latest",
+    "zod": "latest"
+  },
+  "devDependencies": {
+    "@types/bcrypt": "latest",
+    "@types/cookie-parser": "latest",
+    "@types/cors": "latest",
+    "@types/express": "latest",
+    "@types/jsonwebtoken": "latest",
+    "@types/node": "latest",
+    "prisma": "latest",
+    "tsx": "latest",
+    "typescript": "latest"
+  }
+}
