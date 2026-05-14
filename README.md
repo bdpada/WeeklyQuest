@@ -1,6 +1,6 @@
 # WeeklyQuest
 
-WeeklyQuest is a full-stack web application where admins can create weekly question sets for groups or teams, and users can answer active weekly questions, view scores, and track history. This repository currently contains the Sprint 1 project scaffolding only; product features, authentication flows, and domain logic will be added in later sprints.
+WeeklyQuest is a full-stack web application where admins can create weekly question sets for groups or teams, and users can answer active weekly questions, view scores, and track history. This repository currently contains the Sprint 1 authentication flow; additional product domain features will be added in later sprints.
 
 ## Stack
 
@@ -34,7 +34,7 @@ Copy the example environment file before running the app locally:
 cp .env.example .env
 ```
 
-The default values connect Prisma to the local Docker Compose PostgreSQL instance:
+The default values connect Prisma to the local Docker Compose PostgreSQL instance. Set `JWT_SECRET` to a long random string because the backend signs HTTP-only authentication cookies with it, and keep `CLIENT_ORIGIN` aligned with the frontend dev server so cookie-based CORS requests are accepted:
 
 ```text
 postgresql://weeklyquest_user:weeklyquest_password@localhost:5432/weeklyquest_db?schema=public
@@ -104,11 +104,19 @@ npm run build
 npm run prisma:generate
 ```
 
-## Sprint 1 next steps
+## Sprint 1 authentication
 
-- Implement real registration, login, logout, and current-user behavior.
-- Add JWT cookie handling and protected route integration.
-- Create the first Prisma migration for the initial `User` model.
-- Add frontend form components and API wiring for auth flows.
-- Start modeling groups, weekly question sets, answers, scores, and rankings.
-- Add automated tests for API routes, validation, and frontend route guards.
+Implemented auth endpoints:
+
+```text
+POST /api/auth/register
+POST /api/auth/login
+POST /api/auth/logout
+GET  /api/auth/me
+```
+
+Registration and login set a `weeklyquest_auth` HTTP-only JWT cookie. The frontend calls the API with credentials included, loads the current user from `/api/auth/me`, redirects unauthenticated users to `/login`, and redirects logged-in users away from `/login` and `/register` to `/dashboard`.
+
+## Later sprint scope
+
+Groups, question sets, submissions, scoring, leaderboards, email invites, and deployment workflows are intentionally not implemented yet.

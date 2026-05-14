@@ -3,8 +3,17 @@ import type { UserRole } from '@prisma/client';
 import { HttpError } from '../utils/httpError.js';
 
 export function requireRole(role: UserRole) {
-  return (_req: Request, _res: Response, next: NextFunction) => {
-    // TODO: Compare the authenticated user's role with the required role.
-    next(new HttpError(501, `Role guard placeholder for ${role}`));
+  return (req: Request, _res: Response, next: NextFunction) => {
+    if (!req.user) {
+      next(new HttpError(401, 'Authentication required'));
+      return;
+    }
+
+    if (req.user.role !== role) {
+      next(new HttpError(403, 'You do not have permission to access this resource'));
+      return;
+    }
+
+    next();
   };
 }
