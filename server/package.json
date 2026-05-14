@@ -12,7 +12,7 @@
     "prisma:migrate": "prisma migrate dev"
   },
   "dependencies": {
-    "@prisma/client": "latest",
+    "@prisma/client": "^6.19.3",
     "bcrypt": "latest",
     "cookie-parser": "latest",
     "cors": "latest",
@@ -28,7 +28,7 @@
     "@types/express": "latest",
     "@types/jsonwebtoken": "latest",
     "@types/node": "latest",
-    "prisma": "latest",
+    "prisma": "^6.19.3",
     "tsx": "latest",
     "typescript": "latest"
   }
