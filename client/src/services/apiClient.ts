@@ -1,7 +1,7 @@
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:4000/api';
 
 type ApiClientOptions = Omit<RequestInit, 'body'> & {
-  body?: BodyInit | Record<string, unknown> | null;
+  body?: BodyInit | object | null;
 };
 
 type ApiErrorResponse = {
@@ -36,6 +36,10 @@ export async function apiClient<TResponse>(path: string, options: ApiClientOptio
     }
 
     throw new Error(message);
+  }
+
+  if (response.status === 204) {
+    return undefined as TResponse;
   }
 
   return response.json() as Promise<TResponse>;

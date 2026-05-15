@@ -12,12 +12,46 @@ enum UserRole {
   ADMIN
 }
 
+enum GroupRole {
+  OWNER
+  MEMBER
+}
+
 model User {
-  id           String   @id @default(cuid())
-  email        String   @unique
-  passwordHash String
-  name         String?
-  role         UserRole @default(USER)
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
+  id            String            @id @default(cuid())
+  email         String            @unique
+  passwordHash  String
+  name          String?
+  role          UserRole          @default(USER)
+  createdAt     DateTime          @default(now())
+  updatedAt     DateTime          @updatedAt
+  createdGroups Group[]           @relation("GroupCreator")
+  memberships   GroupMembership[]
+}
+
+model Group {
+  id          String            @id @default(cuid())
+  name        String
+  description String?
+  createdById String
+  createdAt   DateTime          @default(now())
+  updatedAt   DateTime          @updatedAt
+  createdBy   User              @relation("GroupCreator", fields: [createdById], references: [id], onDelete: Restrict)
+  memberships GroupMembership[]
+
+  @@index([createdById])
+}
+
+model GroupMembership {
+  id        String    @id @default(cuid())
+  groupId   String
+  userId    String
+  role      GroupRole @default(MEMBER)
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  group     Group     @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([groupId, userId])
+  @@index([userId])
 }

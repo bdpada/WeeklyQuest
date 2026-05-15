@@ -2,6 +2,8 @@ import { Navigate, Route, Routes } from 'react-router-dom';
 import { AdminRoute } from './components/routes/AdminRoute';
 import { ProtectedRoute } from './components/routes/ProtectedRoute';
 import { AdminDashboardPage } from './pages/AdminDashboardPage';
+import { AdminGroupDetailPage } from './pages/AdminGroupDetailPage';
+import { AdminGroupsPage } from './pages/AdminGroupsPage';
 import { DashboardPage } from './pages/DashboardPage';
 import { LoginPage } from './pages/LoginPage';
 import { ProfilePage } from './pages/ProfilePage';
@@ -20,6 +22,8 @@ function App() {
             <Route path="/profile" element={<ProfilePage />} />
             <Route element={<AdminRoute />}>
               <Route path="/admin" element={<AdminDashboardPage />} />
+              <Route path="/admin/groups" element={<AdminGroupsPage />} />
+              <Route path="/admin/groups/:groupId" element={<AdminGroupDetailPage />} />
             </Route>
           </Route>
         </Routes>
