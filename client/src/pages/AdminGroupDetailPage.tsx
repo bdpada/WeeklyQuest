@@ -2,7 +2,9 @@ import { FormEvent, useEffect, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { groupApi } from '../services/groupApi';
 import { membershipApi } from '../services/membershipApi';
+import { questionSetApi } from '../services/questionSetApi';
 import type { Group } from '../types/group';
+import type { QuestionSet } from '../types/questionSet';
 
 export function AdminGroupDetailPage() {
   const { groupId } = useParams<{ groupId: string }>();
@@ -13,6 +15,8 @@ export function AdminGroupDetailPage() {
   const [success, setSuccess] = useState('');
   const [isLoading, setIsLoading] = useState(true);
   const [isAdding, setIsAdding] = useState(false);
+  const [questionSets, setQuestionSets] = useState<QuestionSet[]>([]);
+  const [isLoadingQuestionSets, setIsLoadingQuestionSets] = useState(true);
 
   async function loadGroup() {
     if (!groupId) {
@@ -20,14 +24,21 @@ export function AdminGroupDetailPage() {
     }
 
     setError('');
-    const response = await groupApi.get(groupId);
-    setGroup(response.group);
+    const [groupResponse, questionSetsResponse] = await Promise.all([
+      groupApi.get(groupId),
+      questionSetApi.listForGroup(groupId),
+    ]);
+    setGroup(groupResponse.group);
+    setQuestionSets(questionSetsResponse.questionSets);
   }
 
   useEffect(() => {
     void loadGroup()
       .catch((loadError: Error) => setError(loadError.message))
-      .finally(() => setIsLoading(false));
+      .finally(() => {
+        setIsLoading(false);
+        setIsLoadingQuestionSets(false);
+      });
   }, [groupId]);
 
   async function handleAddMember(event: FormEvent<HTMLFormElement>) {
@@ -152,6 +163,33 @@ export function AdminGroupDetailPage() {
       {error ? <p className="mt-6 rounded-lg bg-red-50 p-3 text-sm font-medium text-red-700">{error}</p> : null}
       {success ? <p className="mt-6 rounded-lg bg-emerald-50 p-3 text-sm font-medium text-emerald-700">{success}</p> : null}
 
+
+      <div className="mt-8 rounded-lg bg-slate-50 p-5 ring-1 ring-slate-200">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <h2 className="text-xl font-semibold text-slate-900">Question sets</h2>
+          <Link className="rounded-lg bg-indigo-600 px-4 py-2 text-sm font-semibold text-white hover:bg-indigo-700" to={`/admin/groups/${group.id}/question-sets/new`}>
+            Create Question Set
+          </Link>
+        </div>
+        {isLoadingQuestionSets ? <p className="mt-4 text-slate-600">Loading question sets...</p> : null}
+        {!isLoadingQuestionSets && questionSets.length === 0 ? <p className="mt-4 text-slate-600">No question sets yet.</p> : null}
+        <div className="mt-4 grid gap-3">
+          {questionSets.map((questionSet) => (
+            <article className="rounded-lg border border-slate-200 bg-white p-4" key={questionSet.id}>
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                <div>
+                  <h3 className="font-semibold text-slate-900">{questionSet.title}</h3>
+                  <p className="mt-1 text-sm text-slate-600">{questionSet.weekLabel} · {questionSet.status}</p>
+                  <p className="mt-1 text-xs text-slate-500">{questionSet.questions.length} question{questionSet.questions.length === 1 ? '' : 's'}</p>
+                </div>
+                <Link className="rounded-lg border border-slate-300 px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50" to={`/admin/question-sets/${questionSet.id}/edit`}>
+                  Edit
+                </Link>
+              </div>
+            </article>
+          ))}
+        </div>
+      </div>
       <div className="mt-8">
         <h2 className="text-xl font-semibold text-slate-900">Members</h2>
         {group.memberships.length === 0 ? <p className="mt-4 text-slate-600">This group has no members.</p> : null}

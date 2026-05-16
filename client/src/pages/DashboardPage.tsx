@@ -2,7 +2,9 @@ import { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
 import { groupApi } from '../services/groupApi';
+import { questionSetApi } from '../services/questionSetApi';
 import type { Group } from '../types/group';
+import type { QuestionSet } from '../types/questionSet';
 
 export function DashboardPage() {
   const { logout, user, isAdmin } = useAuth();
@@ -10,10 +12,18 @@ export function DashboardPage() {
   const [groups, setGroups] = useState<Group[]>([]);
   const [groupsError, setGroupsError] = useState('');
   const [isLoadingGroups, setIsLoadingGroups] = useState(true);
+  const [publishedQuestionSets, setPublishedQuestionSets] = useState<Record<string, QuestionSet[]>>({});
 
   useEffect(() => {
     void groupApi.list()
-      .then((response) => setGroups(response.groups))
+      .then(async (response) => {
+        setGroups(response.groups);
+        const questionSetEntries = await Promise.all(response.groups.map(async (group) => {
+          const questionSetsResponse = await questionSetApi.listForGroup(group.id);
+          return [group.id, questionSetsResponse.questionSets.filter((questionSet) => questionSet.status === 'PUBLISHED')] as const;
+        }));
+        setPublishedQuestionSets(Object.fromEntries(questionSetEntries));
+      })
       .catch((error: Error) => setGroupsError(error.message))
       .finally(() => setIsLoadingGroups(false));
   }, []);
@@ -58,6 +68,15 @@ export function DashboardPage() {
               <p className="mt-2 text-xs font-medium uppercase tracking-wide text-indigo-700">
                 {group.memberships.length} member{group.memberships.length === 1 ? '' : 's'}
               </p>
+              <div className="mt-3 rounded-lg bg-slate-50 p-3">
+                <p className="text-sm font-semibold text-slate-800">Published question sets</p>
+                {(publishedQuestionSets[group.id] ?? []).length === 0 ? <p className="mt-1 text-sm text-slate-500">No published question sets yet.</p> : null}
+                <ul className="mt-2 grid gap-1 text-sm text-slate-600">
+                  {(publishedQuestionSets[group.id] ?? []).map((questionSet) => (
+                    <li key={questionSet.id}>{questionSet.weekLabel}: {questionSet.title}</li>
+                  ))}
+                </ul>
+              </div>
             </article>
           ))}
         </div>
