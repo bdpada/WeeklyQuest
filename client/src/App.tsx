@@ -8,6 +8,7 @@ import { DashboardPage } from './pages/DashboardPage';
 import { LoginPage } from './pages/LoginPage';
 import { ProfilePage } from './pages/ProfilePage';
 import { RegisterPage } from './pages/RegisterPage';
+import { QuestionSetEditorPage } from './pages/QuestionSetEditorPage';
 
 function App() {
   return (
@@ -24,6 +25,8 @@ function App() {
               <Route path="/admin" element={<AdminDashboardPage />} />
               <Route path="/admin/groups" element={<AdminGroupsPage />} />
               <Route path="/admin/groups/:groupId" element={<AdminGroupDetailPage />} />
+              <Route path="/admin/groups/:groupId/question-sets/new" element={<QuestionSetEditorPage />} />
+              <Route path="/admin/question-sets/:questionSetId/edit" element={<QuestionSetEditorPage />} />
             </Route>
           </Route>
         </Routes>

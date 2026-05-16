@@ -17,6 +17,19 @@ enum GroupRole {
   MEMBER
 }
 
+enum QuestionSetStatus {
+  DRAFT
+  PUBLISHED
+  LOCKED
+  SCORED
+  ARCHIVED
+}
+
+enum QuestionType {
+  MULTIPLE_CHOICE
+  TRUE_FALSE
+}
+
 model User {
   id            String            @id @default(cuid())
   email         String            @unique
@@ -27,17 +40,19 @@ model User {
   updatedAt     DateTime          @updatedAt
   createdGroups Group[]           @relation("GroupCreator")
   memberships   GroupMembership[]
+  questionSets  QuestionSet[]     @relation("QuestionSetCreator")
 }
 
 model Group {
-  id          String            @id @default(cuid())
-  name        String
-  description String?
-  createdById String
-  createdAt   DateTime          @default(now())
-  updatedAt   DateTime          @updatedAt
-  createdBy   User              @relation("GroupCreator", fields: [createdById], references: [id], onDelete: Restrict)
-  memberships GroupMembership[]
+  id           String            @id @default(cuid())
+  name         String
+  description  String?
+  createdById  String
+  createdAt    DateTime          @default(now())
+  updatedAt    DateTime          @updatedAt
+  createdBy    User              @relation("GroupCreator", fields: [createdById], references: [id], onDelete: Restrict)
+  memberships  GroupMembership[]
+  questionSets QuestionSet[]
 
   @@index([createdById])
 }
@@ -54,4 +69,52 @@ model GroupMembership {
 
   @@unique([groupId, userId])
   @@index([userId])
+}
+
+model QuestionSet {
+  id          String            @id @default(cuid())
+  groupId     String
+  createdById String
+  title       String
+  description String?
+  weekLabel   String
+  openAt      DateTime
+  dueAt       DateTime
+  status      QuestionSetStatus @default(DRAFT)
+  createdAt   DateTime          @default(now())
+  updatedAt   DateTime          @updatedAt
+  group       Group             @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  createdBy   User              @relation("QuestionSetCreator", fields: [createdById], references: [id], onDelete: Restrict)
+  questions   Question[]
+
+  @@index([groupId])
+  @@index([createdById])
+  @@index([status])
+}
+
+model Question {
+  id            String      @id @default(cuid())
+  questionSetId String
+  type          QuestionType
+  prompt        String
+  order         Int         @default(0)
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
+  questionSet   QuestionSet @relation(fields: [questionSetId], references: [id], onDelete: Cascade)
+  options       QuestionOption[]
+
+  @@index([questionSetId])
+}
+
+model QuestionOption {
+  id         String   @id @default(cuid())
+  questionId String
+  text       String
+  isCorrect  Boolean  @default(false)
+  order      Int      @default(0)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+  question   Question @relation(fields: [questionId], references: [id], onDelete: Cascade)
+
+  @@index([questionId])
 }
