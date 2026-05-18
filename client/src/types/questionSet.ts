@@ -1,5 +1,5 @@
 export type QuestionSetStatus = 'DRAFT' | 'PUBLISHED' | 'LOCKED' | 'SCORED' | 'ARCHIVED';
-export type QuestionType = 'MULTIPLE_CHOICE' | 'TRUE_FALSE';
+export type QuestionType = 'MULTIPLE_CHOICE' | 'TRUE_FALSE' | 'YES_NO' | 'INPUT_ANSWER';
 
 export type QuestionOption = {
   id: string;

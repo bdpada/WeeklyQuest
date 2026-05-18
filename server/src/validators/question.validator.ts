@@ -11,7 +11,7 @@ const optionBody = {
 
 export const createQuestionSchema = z.object({
   body: z.object({
-    type: z.enum(['MULTIPLE_CHOICE', 'TRUE_FALSE']),
+    type: z.enum(['MULTIPLE_CHOICE', 'TRUE_FALSE', 'YES_NO', 'INPUT_ANSWER']),
     prompt: z.string().trim().min(1, 'Question prompt is required').max(1000, 'Question prompt must be 1000 characters or fewer'),
     order: z.number().int().min(0).optional(),
   }),
@@ -21,7 +21,7 @@ export const createQuestionSchema = z.object({
 
 export const updateQuestionSchema = z.object({
   body: z.object({
-    type: z.enum(['MULTIPLE_CHOICE', 'TRUE_FALSE']).optional(),
+    type: z.enum(['MULTIPLE_CHOICE', 'TRUE_FALSE', 'YES_NO', 'INPUT_ANSWER']).optional(),
     prompt: z.string().trim().min(1, 'Question prompt is required').max(1000, 'Question prompt must be 1000 characters or fewer').optional(),
     order: z.number().int().min(0).optional(),
   }).refine((body) => Object.values(body).some((value) => value !== undefined), {

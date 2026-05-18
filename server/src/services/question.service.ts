@@ -78,6 +78,22 @@ export async function updateQuestion(questionId: string, input: UpdateQuestionIn
   const existing = await findQuestionOrThrow(questionId);
   await assertQuestionSetEditableForAdmin(existing.questionSetId, user);
 
+  if (input.type === 'INPUT_ANSWER') {
+    return prisma.$transaction(async (transaction) => {
+      await transaction.questionOption.deleteMany({ where: { questionId } });
+
+      return transaction.question.update({
+        where: { id: questionId },
+        data: {
+          type: input.type,
+          ...(input.prompt !== undefined ? { prompt: input.prompt.trim() } : {}),
+          ...(input.order !== undefined ? { order: input.order } : {}),
+        },
+        include: questionInclude,
+      });
+    });
+  }
+
   return prisma.question.update({
     where: { id: questionId },
     data: {
@@ -98,6 +114,10 @@ export async function deleteQuestion(questionId: string, user: CurrentUser) {
 export async function createOption(questionId: string, input: CreateOptionInput, user: CurrentUser) {
   const question = await findQuestionOrThrow(questionId);
   await assertQuestionSetEditableForAdmin(question.questionSetId, user);
+
+  if (question.type === 'INPUT_ANSWER') {
+    throw new HttpError(400, 'Input answer questions do not support options');
+  }
 
   if (input.isCorrect) {
     await setSiblingOptionsIncorrect(questionId);

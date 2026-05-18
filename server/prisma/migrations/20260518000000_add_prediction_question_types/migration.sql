@@ -1,0 +1,3 @@
+-- AlterEnum
+ALTER TYPE "QuestionType" ADD VALUE 'YES_NO';
+ALTER TYPE "QuestionType" ADD VALUE 'INPUT_ANSWER';

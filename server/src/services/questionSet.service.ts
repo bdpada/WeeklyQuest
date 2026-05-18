@@ -153,6 +153,12 @@ export async function updateQuestionSet(questionSetId: string, input: UpdateQues
   });
 }
 
+function assertAtMostOneCorrectOption(questionLabel: string, correctCount: number) {
+  if (correctCount > 1) {
+    throw new HttpError(400, `${questionLabel} questions cannot have more than one correct option`);
+  }
+}
+
 function validatePublish(questionSet: Awaited<ReturnType<typeof findQuestionSetForAccessOrThrow>>) {
   if (questionSet.questions.length === 0) {
     throw new HttpError(400, 'Question set must have at least one question before publishing');
@@ -165,18 +171,21 @@ function validatePublish(questionSet: Awaited<ReturnType<typeof findQuestionSetF
       if (question.options.length < 2) {
         throw new HttpError(400, 'Multiple choice questions must have at least two options');
       }
-      if (correctCount !== 1) {
-        throw new HttpError(400, 'Multiple choice questions must have exactly one correct option');
-      }
+      assertAtMostOneCorrectOption('Multiple choice', correctCount);
     }
 
     if (question.type === 'TRUE_FALSE') {
       if (question.options.length !== 2) {
         throw new HttpError(400, 'True/false questions must have exactly two options');
       }
-      if (correctCount !== 1) {
-        throw new HttpError(400, 'True/false questions must have exactly one correct option');
+      assertAtMostOneCorrectOption('True/false', correctCount);
+    }
+
+    if (question.type === 'YES_NO') {
+      if (question.options.length !== 2) {
+        throw new HttpError(400, 'Yes/no questions must have exactly two options');
       }
+      assertAtMostOneCorrectOption('Yes/no', correctCount);
     }
   }
 }
