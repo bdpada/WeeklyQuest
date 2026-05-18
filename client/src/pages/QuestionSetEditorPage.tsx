@@ -36,6 +36,17 @@ function formFromQuestionSet(questionSet: QuestionSet): QuestionSetInput {
   };
 }
 
+const questionTypeLabels: Record<QuestionType, string> = {
+  MULTIPLE_CHOICE: 'Multiple choice',
+  TRUE_FALSE: 'True/false',
+  YES_NO: 'Yes/no',
+  INPUT_ANSWER: 'Input answer',
+};
+
+function supportsOptions(questionType: QuestionType) {
+  return questionType !== 'INPUT_ANSWER';
+}
+
 export function QuestionSetEditorPage() {
   const { groupId, questionSetId } = useParams<{ groupId: string; questionSetId: string }>();
   const navigate = useNavigate();
@@ -169,7 +180,7 @@ export function QuestionSetEditorPage() {
   async function handleAddOption(question: Question) {
     setError('');
     try {
-      await questionApi.createOption(question.id, { text: 'New option', isCorrect: question.options.length === 0, order: question.options.length });
+      await questionApi.createOption(question.id, { text: 'New option', isCorrect: false, order: question.options.length });
       await refreshCurrentQuestionSet();
     } catch (optionError) {
       setError(optionError instanceof Error ? optionError.message : 'Unable to add option');
@@ -194,6 +205,22 @@ export function QuestionSetEditorPage() {
       await refreshCurrentQuestionSet();
     } catch (optionError) {
       setError(optionError instanceof Error ? optionError.message : 'Unable to update correct option');
+    }
+  }
+
+  async function handleClearCorrectOption(question: Question) {
+    const correctOption = question.options.find((option) => option.isCorrect);
+
+    if (!correctOption) {
+      return;
+    }
+
+    setError('');
+    try {
+      await questionApi.updateOption(correctOption.id, { isCorrect: false });
+      await refreshCurrentQuestionSet();
+    } catch (optionError) {
+      setError(optionError instanceof Error ? optionError.message : 'Unable to clear correct option');
     }
   }
 
@@ -261,8 +288,9 @@ export function QuestionSetEditorPage() {
           <h2 className="text-xl font-semibold text-slate-900">Questions</h2>
           <form className="mt-4 grid gap-3 rounded-lg border border-dashed border-slate-300 p-4 sm:grid-cols-[180px_1fr_auto]" onSubmit={handleAddQuestion}>
             <select className="rounded-lg border border-slate-300 px-3 py-2" value={newQuestionType} onChange={(event) => setNewQuestionType(event.target.value as QuestionType)}>
-              <option value="MULTIPLE_CHOICE">Multiple choice</option>
-              <option value="TRUE_FALSE">True/false</option>
+              {Object.entries(questionTypeLabels).map(([value, label]) => (
+                <option key={value} value={value}>{label}</option>
+              ))}
             </select>
             <input className="rounded-lg border border-slate-300 px-3 py-2" value={newQuestionPrompt} onChange={(event) => setNewQuestionPrompt(event.target.value)} placeholder="Question prompt" required />
             <button className="rounded-lg bg-indigo-600 px-4 py-2 font-semibold text-white hover:bg-indigo-700" type="submit">Add question</button>
@@ -273,7 +301,7 @@ export function QuestionSetEditorPage() {
               <article className="rounded-lg border border-slate-200 p-4" key={question.id}>
                 <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                   <div className="flex-1">
-                    <p className="text-xs font-semibold uppercase tracking-wide text-indigo-700">{question.type.replace('_', ' ')}</p>
+                    <p className="text-xs font-semibold uppercase tracking-wide text-indigo-700">{questionTypeLabels[question.type]}</p>
                     <textarea className="mt-2 w-full rounded-lg border border-slate-300 px-3 py-2" value={questionDrafts[question.id] ?? question.prompt} onChange={(event) => setQuestionDrafts((current) => ({ ...current, [question.id]: event.target.value }))} />
                   </div>
                   <div className="flex gap-2">
@@ -282,17 +310,29 @@ export function QuestionSetEditorPage() {
                   </div>
                 </div>
 
-                <div className="mt-4 grid gap-2">
-                  {question.options.map((option) => (
-                    <div className="grid gap-2 rounded-lg bg-slate-50 p-3 sm:grid-cols-[auto_1fr_auto_auto] sm:items-center" key={option.id}>
-                      <input type="radio" name={`correct-${question.id}`} checked={option.isCorrect} onChange={() => void handleCorrectOption(option)} title="Mark correct" />
-                      <input className="rounded-lg border border-slate-300 px-3 py-2" value={optionDrafts[option.id] ?? option.text} onChange={(event) => setOptionDrafts((current) => ({ ...current, [option.id]: event.target.value }))} />
-                      <button className="rounded-lg border border-slate-300 px-3 py-2 text-sm font-medium text-slate-700 hover:bg-white" type="button" onClick={() => void handleSaveOption(option)}>Save</button>
-                      <button className="rounded-lg border border-red-300 px-3 py-2 text-sm font-medium text-red-700 hover:bg-red-50" type="button" onClick={() => void handleDeleteOption(option.id)}>Delete</button>
+                {supportsOptions(question.type) ? (
+                  <>
+                    <p className="mt-3 text-sm text-slate-500">Correct answers are optional until the real-world result is known. Select one later, or clear the current selection.</p>
+                    <div className="mt-4 grid gap-2">
+                      {question.options.map((option) => (
+                        <div className="grid gap-2 rounded-lg bg-slate-50 p-3 sm:grid-cols-[auto_1fr_auto_auto] sm:items-center" key={option.id}>
+                          <input type="radio" name={`correct-${question.id}`} checked={option.isCorrect} onChange={() => void handleCorrectOption(option)} title="Mark correct" />
+                          <input className="rounded-lg border border-slate-300 px-3 py-2" value={optionDrafts[option.id] ?? option.text} onChange={(event) => setOptionDrafts((current) => ({ ...current, [option.id]: event.target.value }))} />
+                          <button className="rounded-lg border border-slate-300 px-3 py-2 text-sm font-medium text-slate-700 hover:bg-white" type="button" onClick={() => void handleSaveOption(option)}>Save</button>
+                          <button className="rounded-lg border border-red-300 px-3 py-2 text-sm font-medium text-red-700 hover:bg-red-50" type="button" onClick={() => void handleDeleteOption(option.id)}>Delete</button>
+                        </div>
+                      ))}
                     </div>
-                  ))}
-                </div>
-                <button className="mt-3 rounded-lg bg-indigo-50 px-3 py-2 text-sm font-semibold text-indigo-700 hover:bg-indigo-100" type="button" onClick={() => void handleAddOption(question)}>Add option</button>
+                    <div className="mt-3 flex flex-wrap gap-2">
+                      <button className="rounded-lg bg-indigo-50 px-3 py-2 text-sm font-semibold text-indigo-700 hover:bg-indigo-100" type="button" onClick={() => void handleAddOption(question)}>Add option</button>
+                      {question.options.some((option) => option.isCorrect) ? (
+                        <button className="rounded-lg border border-slate-300 px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50" type="button" onClick={() => void handleClearCorrectOption(question)}>Clear correct answer</button>
+                      ) : null}
+                    </div>
+                  </>
+                ) : (
+                  <p className="mt-3 rounded-lg bg-amber-50 p-3 text-sm text-amber-800">Input answer questions do not use answer options. Submissions will be manually graded after submissions are locked.</p>
+                )}
               </article>
             ))}
           </div>

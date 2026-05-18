@@ -28,6 +28,8 @@ enum QuestionSetStatus {
 enum QuestionType {
   MULTIPLE_CHOICE
   TRUE_FALSE
+  YES_NO
+  INPUT_ANSWER
 }
 
 model User {
