@@ -24,6 +24,24 @@ export type CreateOptionInput = {
 
 export type UpdateOptionInput = Partial<CreateOptionInput>;
 
+function getDefaultOptionsForQuestionType(type: QuestionType): CreateOptionInput[] {
+  if (type === 'YES_NO') {
+    return [
+      { text: 'Yes', order: 1, isCorrect: false },
+      { text: 'No', order: 2, isCorrect: false },
+    ];
+  }
+
+  if (type === 'TRUE_FALSE') {
+    return [
+      { text: 'True', order: 1, isCorrect: false },
+      { text: 'False', order: 2, isCorrect: false },
+    ];
+  }
+
+  return [];
+}
+
 const questionInclude = {
   options: { orderBy: [{ order: 'asc' as const }, { createdAt: 'asc' as const }] },
 };
@@ -61,14 +79,33 @@ async function setSiblingOptionsIncorrect(questionId: string, optionIdToKeep?: s
 export async function createQuestion(questionSetId: string, input: CreateQuestionInput, user: CurrentUser) {
   await assertQuestionSetEditableForAdmin(questionSetId, user);
 
-  const question = await prisma.question.create({
-    data: {
-      questionSetId,
-      type: input.type,
-      prompt: input.prompt.trim(),
-      order: input.order ?? 0,
-    },
-    include: questionInclude,
+  const defaultOptions = getDefaultOptionsForQuestionType(input.type);
+
+  const question = await prisma.$transaction(async (transaction) => {
+    const createdQuestion = await transaction.question.create({
+      data: {
+        questionSetId,
+        type: input.type,
+        prompt: input.prompt.trim(),
+        order: input.order ?? 0,
+      },
+    });
+
+    if (defaultOptions.length > 0) {
+      await transaction.questionOption.createMany({
+        data: defaultOptions.map((option) => ({
+          questionId: createdQuestion.id,
+          text: option.text.trim(),
+          order: option.order ?? 0,
+          isCorrect: option.isCorrect ?? false,
+        })),
+      });
+    }
+
+    return transaction.question.findUniqueOrThrow({
+      where: { id: createdQuestion.id },
+      include: questionInclude,
+    });
   });
 
   return question;

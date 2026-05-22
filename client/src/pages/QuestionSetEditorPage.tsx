@@ -47,6 +47,26 @@ function supportsOptions(questionType: QuestionType) {
   return questionType !== 'INPUT_ANSWER';
 }
 
+function allowsManualOptions(questionType: QuestionType) {
+  return questionType === 'MULTIPLE_CHOICE';
+}
+
+function getQuestionTypeHelperText(questionType: QuestionType) {
+  if (questionType === 'YES_NO') {
+    return 'Yes/No options are created automatically.';
+  }
+
+  if (questionType === 'TRUE_FALSE') {
+    return 'True/False options are created automatically.';
+  }
+
+  if (questionType === 'INPUT_ANSWER') {
+    return 'Users will type their own answer. Admins will grade responses later.';
+  }
+
+  return '';
+}
+
 export function QuestionSetEditorPage() {
   const { groupId, questionSetId } = useParams<{ groupId: string; questionSetId: string }>();
   const navigate = useNavigate();
@@ -144,13 +164,27 @@ export function QuestionSetEditorPage() {
 
     setError('');
     try {
-      await questionApi.create(questionSet.id, {
+      const response = await questionApi.create(questionSet.id, {
         type: newQuestionType,
         prompt: newQuestionPrompt,
         order: questionSet.questions.length,
       });
+      setQuestionSet((current) => {
+        if (!current) {
+          return current;
+        }
+
+        return {
+          ...current,
+          questions: [...current.questions, response.question],
+        };
+      });
+      setQuestionDrafts((current) => ({ ...current, [response.question.id]: response.question.prompt }));
+      setOptionDrafts((current) => ({
+        ...current,
+        ...Object.fromEntries(response.question.options.map((option) => [option.id, option.text])),
+      }));
       setNewQuestionPrompt('');
-      await refreshCurrentQuestionSet();
     } catch (questionError) {
       setError(questionError instanceof Error ? questionError.message : 'Unable to add question');
     }
@@ -313,6 +347,7 @@ export function QuestionSetEditorPage() {
                 {supportsOptions(question.type) ? (
                   <>
                     <p className="mt-3 text-sm text-slate-500">Correct answers are optional until the real-world result is known. Select one later, or clear the current selection.</p>
+                    {getQuestionTypeHelperText(question.type) ? <p className="mt-2 text-sm text-indigo-600">{getQuestionTypeHelperText(question.type)}</p> : null}
                     <div className="mt-4 grid gap-2">
                       {question.options.map((option) => (
                         <div className="grid gap-2 rounded-lg bg-slate-50 p-3 sm:grid-cols-[auto_1fr_auto_auto] sm:items-center" key={option.id}>
@@ -324,14 +359,14 @@ export function QuestionSetEditorPage() {
                       ))}
                     </div>
                     <div className="mt-3 flex flex-wrap gap-2">
-                      <button className="rounded-lg bg-indigo-50 px-3 py-2 text-sm font-semibold text-indigo-700 hover:bg-indigo-100" type="button" onClick={() => void handleAddOption(question)}>Add option</button>
+                      {allowsManualOptions(question.type) ? <button className="rounded-lg bg-indigo-50 px-3 py-2 text-sm font-semibold text-indigo-700 hover:bg-indigo-100" type="button" onClick={() => void handleAddOption(question)}>Add option</button> : null}
                       {question.options.some((option) => option.isCorrect) ? (
                         <button className="rounded-lg border border-slate-300 px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50" type="button" onClick={() => void handleClearCorrectOption(question)}>Clear correct answer</button>
                       ) : null}
                     </div>
                   </>
                 ) : (
-                  <p className="mt-3 rounded-lg bg-amber-50 p-3 text-sm text-amber-800">Input answer questions do not use answer options. Submissions will be manually graded after submissions are locked.</p>
+                  <p className="mt-3 rounded-lg bg-amber-50 p-3 text-sm text-amber-800">{getQuestionTypeHelperText(question.type)}</p>
                 )}
               </article>
             ))}
