@@ -32,6 +32,12 @@ enum QuestionType {
   INPUT_ANSWER
 }
 
+enum SubmissionStatus {
+  DRAFT
+  SUBMITTED
+  GRADED
+}
+
 model User {
   id            String            @id @default(cuid())
   email         String            @unique
@@ -43,7 +49,9 @@ model User {
   createdGroups Group[]           @relation("GroupCreator")
   memberships   GroupMembership[]
   questionSets  QuestionSet[]     @relation("QuestionSetCreator")
+  submissions   Submission[]
 }
+
 
 model Group {
   id           String            @id @default(cuid())
@@ -88,6 +96,7 @@ model QuestionSet {
   group       Group             @relation(fields: [groupId], references: [id], onDelete: Cascade)
   createdBy   User              @relation("QuestionSetCreator", fields: [createdById], references: [id], onDelete: Restrict)
   questions   Question[]
+  submissions Submission[]
 
   @@index([groupId])
   @@index([createdById])
@@ -104,6 +113,7 @@ model Question {
   updatedAt     DateTime    @updatedAt
   questionSet   QuestionSet @relation(fields: [questionSetId], references: [id], onDelete: Cascade)
   options       QuestionOption[]
+  answers       Answer[]
 
   @@index([questionSetId])
 }
@@ -117,6 +127,39 @@ model QuestionOption {
   createdAt  DateTime @default(now())
   updatedAt  DateTime @updatedAt
   question   Question @relation(fields: [questionId], references: [id], onDelete: Cascade)
+  answers    Answer[]
 
+  @@index([questionId])
+}
+
+model Submission {
+  id           String           @id @default(cuid())
+  userId       String
+  questionSetId String
+  status       SubmissionStatus @default(DRAFT)
+  submittedAt  DateTime?
+  createdAt    DateTime         @default(now())
+  updatedAt    DateTime         @updatedAt
+  user         User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  questionSet  QuestionSet      @relation(fields: [questionSetId], references: [id], onDelete: Cascade)
+  answers      Answer[]
+
+  @@unique([userId, questionSetId])
+  @@index([questionSetId])
+}
+
+model Answer {
+  id               String          @id @default(cuid())
+  submissionId     String
+  questionId       String
+  selectedOptionId String?
+  textAnswer       String?
+  createdAt        DateTime        @default(now())
+  updatedAt        DateTime        @updatedAt
+  submission       Submission      @relation(fields: [submissionId], references: [id], onDelete: Cascade)
+  question         Question        @relation(fields: [questionId], references: [id], onDelete: Cascade)
+  selectedOption   QuestionOption? @relation(fields: [selectedOptionId], references: [id], onDelete: SetNull)
+
+  @@unique([submissionId, questionId])
   @@index([questionId])
 }

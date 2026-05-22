@@ -9,6 +9,7 @@ import { LoginPage } from './pages/LoginPage';
 import { ProfilePage } from './pages/ProfilePage';
 import { RegisterPage } from './pages/RegisterPage';
 import { QuestionSetEditorPage } from './pages/QuestionSetEditorPage';
+import { QuestionSetSubmissionPage } from './pages/QuestionSetSubmissionPage';
 
 function App() {
   return (
@@ -21,6 +22,7 @@ function App() {
           <Route element={<ProtectedRoute />}>
             <Route path="/dashboard" element={<DashboardPage />} />
             <Route path="/profile" element={<ProfilePage />} />
+            <Route path="/question-sets/:questionSetId" element={<QuestionSetSubmissionPage />} />
             <Route element={<AdminRoute />}>
               <Route path="/admin" element={<AdminDashboardPage />} />
               <Route path="/admin/groups" element={<AdminGroupsPage />} />

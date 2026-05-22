@@ -5,6 +5,7 @@ import { groupApi } from '../services/groupApi';
 import { questionSetApi } from '../services/questionSetApi';
 import type { Group } from '../types/group';
 import type { QuestionSet } from '../types/questionSet';
+import { submissionApi } from '../services/submissionApi';
 
 export function DashboardPage() {
   const { logout, user, isAdmin } = useAuth();
@@ -13,6 +14,7 @@ export function DashboardPage() {
   const [groupsError, setGroupsError] = useState('');
   const [isLoadingGroups, setIsLoadingGroups] = useState(true);
   const [publishedQuestionSets, setPublishedQuestionSets] = useState<Record<string, QuestionSet[]>>({});
+  const [statuses, setStatuses] = useState<Record<string,string>>({});
 
   useEffect(() => {
     void groupApi.list()
@@ -22,7 +24,19 @@ export function DashboardPage() {
           const questionSetsResponse = await questionSetApi.listForGroup(group.id);
           return [group.id, questionSetsResponse.questionSets.filter((questionSet) => questionSet.status === 'PUBLISHED')] as const;
         }));
-        setPublishedQuestionSets(Object.fromEntries(questionSetEntries));
+        const map = Object.fromEntries(questionSetEntries);
+        setPublishedQuestionSets(map);
+        const statusMap: Record<string,string> = {};
+        for (const sets of Object.values(map)) {
+          for (const qs of sets) {
+            const duePassed = new Date(qs.dueAt).getTime() < Date.now();
+            try {
+              const submission = (await submissionApi.getMySubmission(qs.id)).submission;
+              statusMap[qs.id] = submission?.status === 'SUBMITTED' ? 'Submitted' : submission ? 'Draft' : duePassed ? 'Closed' : 'Not Started';
+            } catch { statusMap[qs.id] = duePassed ? 'Closed' : 'Not Started'; }
+          }
+        }
+        setStatuses(statusMap);
       })
       .catch((error: Error) => setGroupsError(error.message))
       .finally(() => setIsLoadingGroups(false));
@@ -73,7 +87,7 @@ export function DashboardPage() {
                 {(publishedQuestionSets[group.id] ?? []).length === 0 ? <p className="mt-1 text-sm text-slate-500">No published question sets yet.</p> : null}
                 <ul className="mt-2 grid gap-1 text-sm text-slate-600">
                   {(publishedQuestionSets[group.id] ?? []).map((questionSet) => (
-                    <li key={questionSet.id}>{questionSet.weekLabel}: {questionSet.title}</li>
+                    <li key={questionSet.id}><Link className='text-indigo-700 underline' to={`/question-sets/${questionSet.id}`}>{questionSet.weekLabel}: {questionSet.title}</Link> · due {new Date(questionSet.dueAt).toLocaleString()} · {statuses[questionSet.id] ?? 'Not Started'}</li>
                   ))}
                 </ul>
               </div>

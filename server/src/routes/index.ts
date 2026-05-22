@@ -4,6 +4,7 @@ import { healthRouter } from './health.routes.js';
 import { groupRouter } from './group.routes.js';
 import { questionRouter } from './question.routes.js';
 import { questionSetRouter } from './questionSet.routes.js';
+import { submissionRouter } from './submission.routes.js';
 
 export const apiRouter = Router();
 
@@ -13,3 +14,4 @@ apiRouter.use('/auth', authRouter);
 apiRouter.use('/groups', groupRouter);
 apiRouter.use('/question-sets', questionSetRouter);
 apiRouter.use(questionRouter);
+apiRouter.use(submissionRouter);

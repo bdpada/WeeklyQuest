@@ -1,0 +1,20 @@
+import { useEffect, useMemo, useState } from 'react';
+import { useParams } from 'react-router-dom';
+import { questionSetApi } from '../services/questionSetApi';
+import { submissionApi } from '../services/submissionApi';
+import type { QuestionSet } from '../types/questionSet';
+import type { SaveAnswerInput, Submission } from '../types/submission';
+
+export function QuestionSetSubmissionPage(){
+  const { questionSetId = '' } = useParams();
+  const [questionSet, setQuestionSet] = useState<QuestionSet | null>(null); const [submission, setSubmission] = useState<Submission | null>(null);
+  const [answers, setAnswers] = useState<Record<string, SaveAnswerInput>>({}); const [message,setMessage]=useState('');
+  const closed = useMemo(()=> questionSet ? new Date(questionSet.dueAt).getTime() < Date.now() : false,[questionSet]);
+  const readonly = closed || submission?.status === 'SUBMITTED';
+  useEffect(()=>{(async()=>{ const qs=(await questionSetApi.get(questionSetId)).questionSet; setQuestionSet(qs); let s=(await submissionApi.getMySubmission(questionSetId)).submission; if(!s && new Date(qs.dueAt).getTime()>Date.now()){ s=(await submissionApi.create(questionSetId)).submission; } setSubmission(s); if(s){ const map:Record<string,SaveAnswerInput>={}; s.answers.forEach((a)=>{ map[a.questionId]={questionId:a.questionId,selectedOptionId:a.selectedOptionId ?? undefined,textAnswer:a.textAnswer ?? undefined};}); setAnswers(map);} })().catch((e:Error)=>setMessage(e.message));},[questionSetId]);
+  const setAns=(q:string,v:Partial<SaveAnswerInput>)=>setAnswers((prev)=>({...prev,[q]:{...prev[q],...v,questionId:q}}));
+  const save=async()=>{ if(!submission) return; const payload=Object.values(answers); const s=(await submissionApi.save(submission.id,payload)).submission; setSubmission(s); setMessage('Draft saved'); };
+  const submit=async()=>{ if(!submission || !questionSet) return; const missing=questionSet.questions.some((q)=>!answers[q.id] || (!answers[q.id].selectedOptionId && !(answers[q.id].textAnswer||'').trim())); if(missing){setMessage('Please answer all questions'); return;} await save(); const s=(await submissionApi.submit(submission.id)).submission; setSubmission(s); setMessage('Submitted'); };
+  if(!questionSet) return <p>Loading...</p>;
+  return <section className='rounded-xl bg-white p-6'><h1 className='text-2xl font-bold'>{questionSet.title}</h1><p className='text-sm text-slate-500'>Due {new Date(questionSet.dueAt).toLocaleString()}</p>{closed && submission?.status!=='SUBMITTED'?<p className='mt-2 text-red-600'>This question set is closed.</p>:null}<div className='mt-4 space-y-4'>{questionSet.questions.map((q)=><div key={q.id}><p className='font-medium'>{q.prompt}</p>{q.type==='INPUT_ANSWER'?<textarea disabled={readonly} className='mt-2 w-full rounded border p-2' value={answers[q.id]?.textAnswer ?? ''} onChange={(e)=>setAns(q.id,{textAnswer:e.target.value,selectedOptionId:undefined})}/>:<div className='mt-2 space-y-1'>{q.options.map((o)=><label key={o.id} className='block'><input disabled={readonly} type='radio' name={q.id} checked={answers[q.id]?.selectedOptionId===o.id} onChange={()=>setAns(q.id,{selectedOptionId:o.id,textAnswer:undefined})}/> {o.text}</label>)}</div>}</div>)}</div>{!readonly?<div className='mt-4 flex gap-3'><button onClick={()=>void save()} className='rounded bg-slate-200 px-3 py-2'>Save Draft</button><button onClick={()=>void submit()} className='rounded bg-indigo-600 px-3 py-2 text-white'>Submit Final Answers</button></div>:null}{message?<p className='mt-3 text-sm'>{message}</p>:null}</section>
+}
