@@ -156,6 +156,28 @@ export function QuestionSetEditorPage() {
     }
   }
 
+
+  async function handleArchive() {
+    if (!questionSet) {
+      return;
+    }
+
+    const confirmed = window.confirm('Are you sure you want to delete this question set? Users may lose access to its questions and submissions. This action cannot be undone.');
+    if (!confirmed) {
+      return;
+    }
+
+    setError('');
+    setSuccess('');
+    try {
+      const response = await questionSetApi.archive(questionSet.id);
+      setQuestionSet(response.questionSet);
+      setSuccess('Question set archived.');
+    } catch (archiveError) {
+      setError(archiveError instanceof Error ? archiveError.message : 'Unable to archive question set');
+    }
+  }
+
   async function handleAddQuestion(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (!questionSet) {
@@ -314,6 +336,7 @@ export function QuestionSetEditorPage() {
         <div className="flex flex-wrap gap-3">
           <button className="rounded-lg bg-indigo-600 px-4 py-2 font-semibold text-white hover:bg-indigo-700 disabled:bg-indigo-300" type="submit" disabled={isSaving}>{isSaving ? 'Saving...' : 'Save question set'}</button>
           {questionSet ? <button className="rounded-lg bg-emerald-600 px-4 py-2 font-semibold text-white hover:bg-emerald-700" type="button" onClick={() => void handlePublish()}>Publish</button> : null}
+          {questionSet ? <button className="rounded-lg border border-red-300 px-4 py-2 font-semibold text-red-700 hover:bg-red-50" type="button" onClick={() => void handleArchive()}>Archive question set</button> : null}
         </div>
       </form>
 
