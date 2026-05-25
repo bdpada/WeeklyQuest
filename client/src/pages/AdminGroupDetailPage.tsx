@@ -90,6 +90,11 @@ export function AdminGroupDetailPage() {
       return;
     }
 
+    const confirmed = window.confirm('Are you sure you want to delete this group? This may remove memberships, question sets, and related data. This action cannot be undone.');
+    if (!confirmed) {
+      return;
+    }
+
     setError('');
     setSuccess('');
 
