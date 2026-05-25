@@ -134,6 +134,7 @@ export function AdminGroupDetailPage() {
           <Link className="rounded-lg border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50" to="/admin/groups">
             Back to groups
           </Link>
+          <Link className="rounded-lg border border-indigo-300 px-4 py-2 text-sm font-medium text-indigo-700 hover:bg-indigo-50" to={`/groups/${group.id}/leaderboard`}>Group leaderboard</Link>
           <button
             className="rounded-lg border border-red-300 px-4 py-2 text-sm font-medium text-red-700 hover:bg-red-50"
             type="button"
@@ -189,7 +190,7 @@ export function AdminGroupDetailPage() {
                 </div>
                 <div className='flex gap-2'>
                 <Link className="rounded-lg border border-slate-300 px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50" to={`/admin/question-sets/${questionSet.id}/edit`}>Edit</Link>
-                <Link className="rounded-lg border border-indigo-300 px-3 py-2 text-sm font-medium text-indigo-700 hover:bg-indigo-50" to={`/admin/question-sets/${questionSet.id}/grading`}>Grading</Link>
+                <Link className="rounded-lg border border-indigo-300 px-3 py-2 text-sm font-medium text-indigo-700 hover:bg-indigo-50" to={`/admin/question-sets/${questionSet.id}/grading`}>Grading</Link>{questionSet.status === 'SCORED' ? <Link className="rounded-lg border border-emerald-300 px-3 py-2 text-sm font-medium text-emerald-700 hover:bg-emerald-50" to={`/question-sets/${questionSet.id}/leaderboard`}>Leaderboard</Link> : null}
                 </div>
               </div>
             </article>

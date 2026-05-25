@@ -11,6 +11,9 @@ import { RegisterPage } from './pages/RegisterPage';
 import { QuestionSetEditorPage } from './pages/QuestionSetEditorPage';
 import { QuestionSetSubmissionPage } from './pages/QuestionSetSubmissionPage';
 import { AdminGradingPage } from './pages/AdminGradingPage';
+import { GroupLeaderboardPage } from './pages/GroupLeaderboardPage';
+import { QuestionSetLeaderboardPage } from './pages/QuestionSetLeaderboardPage';
+import { ScoreHistoryPage } from './pages/ScoreHistoryPage';
 
 function App() {
   return (
@@ -24,6 +27,9 @@ function App() {
             <Route path="/dashboard" element={<DashboardPage />} />
             <Route path="/profile" element={<ProfilePage />} />
             <Route path="/question-sets/:questionSetId" element={<QuestionSetSubmissionPage />} />
+            <Route path="/scores" element={<ScoreHistoryPage />} />
+            <Route path="/question-sets/:questionSetId/leaderboard" element={<QuestionSetLeaderboardPage />} />
+            <Route path="/groups/:groupId/leaderboard" element={<GroupLeaderboardPage />} />
             <Route element={<AdminRoute />}>
               <Route path="/admin" element={<AdminDashboardPage />} />
               <Route path="/admin/groups" element={<AdminGroupsPage />} />
