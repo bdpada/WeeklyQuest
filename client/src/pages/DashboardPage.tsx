@@ -5,7 +5,6 @@ import { groupApi } from '../services/groupApi';
 import { questionSetApi } from '../services/questionSetApi';
 import type { Group } from '../types/group';
 import type { QuestionSet } from '../types/questionSet';
-import { submissionApi } from '../services/submissionApi';
 
 export function DashboardPage() {
   const { logout, user, isAdmin } = useAuth();
@@ -13,7 +12,7 @@ export function DashboardPage() {
   const [groups, setGroups] = useState<Group[]>([]);
   const [groupsError, setGroupsError] = useState('');
   const [isLoadingGroups, setIsLoadingGroups] = useState(true);
-  const [publishedQuestionSets, setPublishedQuestionSets] = useState<Record<string, QuestionSet[]>>({});
+  const [visibleQuestionSets, setVisibleQuestionSets] = useState<Record<string, QuestionSet[]>>({});
   const [statuses, setStatuses] = useState<Record<string,string>>({});
 
   useEffect(() => {
@@ -22,18 +21,37 @@ export function DashboardPage() {
         setGroups(response.groups);
         const questionSetEntries = await Promise.all(response.groups.map(async (group) => {
           const questionSetsResponse = await questionSetApi.listForGroup(group.id);
-          return [group.id, questionSetsResponse.questionSets.filter((questionSet) => questionSet.status === 'PUBLISHED')] as const;
+          return [group.id, questionSetsResponse.questionSets] as const;
         }));
         const map = Object.fromEntries(questionSetEntries);
-        setPublishedQuestionSets(map);
+        setVisibleQuestionSets(map);
         const statusMap: Record<string,string> = {};
         for (const sets of Object.values(map)) {
           for (const qs of sets) {
             const duePassed = new Date(qs.dueAt).getTime() < Date.now();
-            try {
-              const submission = (await submissionApi.getMySubmission(qs.id)).submission;
-              statusMap[qs.id] = submission?.status === 'SUBMITTED' ? 'Submitted' : submission ? 'Draft' : duePassed ? 'Closed' : 'Not Started';
-            } catch { statusMap[qs.id] = duePassed ? 'Closed' : 'Not Started'; }
+            const submission = qs.submissions?.[0];
+            if (duePassed && qs.status === 'PUBLISHED' && !submission) {
+              statusMap[qs.id] = 'Closed';
+              continue;
+            }
+
+            if (qs.status === 'SCORED') {
+              statusMap[qs.id] = submission ? 'Results Available' : 'Closed';
+              continue;
+            }
+
+            if (qs.status === 'LOCKED') {
+              statusMap[qs.id] = submission ? 'Awaiting Results' : 'Closed';
+              continue;
+            }
+
+            if (!submission) {
+              statusMap[qs.id] = 'Not Started';
+            } else if (submission.status === 'DRAFT') {
+              statusMap[qs.id] = 'Draft';
+            } else {
+              statusMap[qs.id] = 'Submitted';
+            }
           }
         }
         setStatuses(statusMap);
@@ -83,11 +101,11 @@ export function DashboardPage() {
                 {group.memberships.length} member{group.memberships.length === 1 ? '' : 's'}
               </p>
               <div className="mt-3 rounded-lg bg-slate-50 p-3">
-                <p className="text-sm font-semibold text-slate-800">Published question sets</p>
-                {(publishedQuestionSets[group.id] ?? []).length === 0 ? <p className="mt-1 text-sm text-slate-500">No published question sets yet.</p> : null}
+                <p className="text-sm font-semibold text-slate-800">Question sets</p>
+                {(visibleQuestionSets[group.id] ?? []).length === 0 ? <p className="mt-1 text-sm text-slate-500">No active or completed question sets yet.</p> : null}
                 <ul className="mt-2 grid gap-1 text-sm text-slate-600">
-                  {(publishedQuestionSets[group.id] ?? []).map((questionSet) => (
-                    <li key={questionSet.id}><Link className='text-indigo-700 underline' to={`/question-sets/${questionSet.id}`}>{questionSet.weekLabel}: {questionSet.title}</Link> · due {new Date(questionSet.dueAt).toLocaleString()} · {statuses[questionSet.id] ?? 'Not Started'}</li>
+                  {(visibleQuestionSets[group.id] ?? []).map((questionSet) => (
+                    <li key={questionSet.id}><Link className='text-indigo-700 underline' to={`/question-sets/${questionSet.id}`}>{questionSet.weekLabel}: {questionSet.title}</Link> · due {new Date(questionSet.dueAt).toLocaleString()} · {statuses[questionSet.id] ?? 'Not Started'} {statuses[questionSet.id] === 'Results Available' ? '· View Results' : ''}</li>
                   ))}
                 </ul>
               </div>
