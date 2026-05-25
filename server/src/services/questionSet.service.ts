@@ -80,7 +80,7 @@ async function findQuestionSetForAccessOrThrow(questionSetId: string, user: Curr
       id: questionSetId,
       ...(user.role === 'ADMIN'
         ? {}
-        : { status: 'PUBLISHED', group: { memberships: { some: { userId: user.id } } } }),
+        : { status: { in: ['PUBLISHED', 'LOCKED', 'SCORED'] }, group: { memberships: { some: { userId: user.id } } } }),
     },
     include: questionSetInclude,
   });
@@ -98,9 +98,19 @@ export async function listQuestionSetsForGroup(groupId: string, user: CurrentUse
   return prisma.questionSet.findMany({
     where: {
       groupId,
-      ...(user.role === 'ADMIN' ? {} : { status: 'PUBLISHED' }),
+      ...(user.role === 'ADMIN' ? {} : { status: { in: ['PUBLISHED', 'LOCKED', 'SCORED'] } }),
     },
-    include: questionSetInclude,
+    include:
+      user.role === 'ADMIN'
+        ? questionSetInclude
+        : {
+            ...questionSetInclude,
+            submissions: {
+              where: { userId: user.id },
+              select: { id: true, status: true, submittedAt: true },
+              take: 1,
+            },
+          },
     orderBy: [{ openAt: 'desc' }, { createdAt: 'desc' }],
   });
 }

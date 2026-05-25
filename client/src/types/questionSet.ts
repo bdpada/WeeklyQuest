@@ -23,6 +23,12 @@ export type Question = {
   options: QuestionOption[];
 };
 
+export type QuestionSetSubmissionSummary = {
+  id: string;
+  status: 'DRAFT' | 'SUBMITTED' | 'GRADED';
+  submittedAt?: string | null;
+};
+
 export type QuestionSet = {
   id: string;
   groupId: string;
@@ -36,6 +42,7 @@ export type QuestionSet = {
   createdAt: string;
   updatedAt: string;
   questions: Question[];
+  submissions?: QuestionSetSubmissionSummary[];
 };
 
 export type QuestionSetInput = {

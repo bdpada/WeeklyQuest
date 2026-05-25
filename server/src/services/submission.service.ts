@@ -10,14 +10,18 @@ const objectiveTypes: QuestionType[] = ['MULTIPLE_CHOICE', 'TRUE_FALSE', 'YES_NO
 function sanitizeAnswers<T extends { answers: any[]; questionSet?: { status: string } }>(submission: T | null, user: CurrentUser) {
   if (!submission) return submission;
   if (user.role === 'ADMIN' || submission.questionSet?.status === 'SCORED') return submission;
-  return { ...submission, answers: submission.answers.map((a) => ({ ...a, isCorrect: null, pointsAwarded: null })) };
+  return {
+    ...submission,
+    totalScore: null,
+    answers: submission.answers.map((a) => ({ ...a, isCorrect: null, pointsAwarded: null })),
+  };
 }
 
 async function getQuestionSetForUser(questionSetId: string, user: CurrentUser) {
   const qs = await prisma.questionSet.findFirst({
     where: {
       id: questionSetId,
-      status: { in: ['PUBLISHED', 'SCORED'] },
+      status: { in: ['PUBLISHED', 'LOCKED', 'SCORED'] },
       ...(user.role === 'ADMIN' ? {} : { group: { memberships: { some: { userId: user.id } } } }),
     },
     include: { questions: { include: { options: true } }, group: true },
