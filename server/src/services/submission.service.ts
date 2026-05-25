@@ -17,7 +17,7 @@ async function getQuestionSetForUser(questionSetId: string, user: CurrentUser) {
   const qs = await prisma.questionSet.findFirst({
     where: {
       id: questionSetId,
-      status: 'PUBLISHED',
+      status: { in: ['PUBLISHED', 'SCORED'] },
       ...(user.role === 'ADMIN' ? {} : { group: { memberships: { some: { userId: user.id } } } }),
     },
     include: { questions: { include: { options: true } }, group: true },
@@ -96,7 +96,14 @@ export async function submitSubmission(submissionId: string, user: CurrentUser) 
 export async function listQuestionSetSubmissions(questionSetId: string, user: CurrentUser) {
   if (user.role !== 'ADMIN') throw new HttpError(403, 'You do not have permission to access this resource');
   await getQuestionSetForUser(questionSetId, user);
-  return prisma.submission.findMany({ where: { questionSetId }, include: { user: { select: { id: true, email: true, name: true } }, answers: true }, orderBy: [{ submittedAt: 'desc' }, { createdAt: 'desc' }] });
+  return prisma.submission.findMany({ where: { questionSetId }, include: { user: { select: { id: true, email: true, name: true } }, answers: true }, orderBy: [{ submittedAt: 'desc' }, { createdAt: 'desc' }] }).then((submissions) => submissions.map((submission) => ({
+    ...submission,
+    user: {
+      id: submission.user.id,
+      email: submission.user.email,
+      displayName: submission.user.name,
+    },
+  })));
 }
 
 export async function getSubmission(submissionId: string, user: CurrentUser) { const s = await getOwnedSubmission(submissionId, user); return sanitizeAnswers(s, user); }

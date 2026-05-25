@@ -25,7 +25,31 @@ export async function gradeInputAnswer(answerId: string, isCorrect: boolean, poi
   if (!answer) throw new HttpError(404, 'Answer not found');
   if (answer.question.type !== 'INPUT_ANSWER') throw new HttpError(400, 'Only INPUT_ANSWER answers can be manually graded');
   if (pointsAwarded < 0 || pointsAwarded > answer.question.points) throw new HttpError(400, `pointsAwarded must be between 0 and ${answer.question.points}`);
-  return prisma.answer.update({ where: { id: answerId }, data: { isCorrect, pointsAwarded } });
+  return prisma.answer.update({
+    where: { id: answerId },
+    data: { isCorrect, pointsAwarded },
+    select: {
+      id: true,
+      isCorrect: true,
+      pointsAwarded: true,
+      questionId: true,
+      submissionId: true,
+      submission: {
+        select: {
+          user: { select: { id: true, email: true, name: true } },
+        },
+      },
+    },
+  }).then((updated) => ({
+    ...updated,
+    submission: {
+      user: {
+        id: updated.submission.user.id,
+        email: updated.submission.user.email,
+        displayName: updated.submission.user.name,
+      },
+    },
+  }));
 }
 
 export async function gradeOptionAnswers(questionSetId: string, user: CurrentUser) {
@@ -55,7 +79,7 @@ export async function finalizeScores(questionSetId: string, user: CurrentUser) {
   for (const q of qs.questions) {
     if (optionTypes.includes(q.type as never)) {
       const count = q.options.filter((o) => o.isCorrect).length;
-      if (count !== 1) throw new HttpError(400, `Question ${q.id} must have exactly one correct option`);
+      if (count !== 1) throw new HttpError(400, `Cannot finalize: question ${q.id} must have exactly one correct option before scores can be finalized.`);
     }
   }
 
@@ -64,8 +88,8 @@ export async function finalizeScores(questionSetId: string, user: CurrentUser) {
     for (const s of qs.submissions) {
       let total = 0;
       for (const a of s.answers) {
-        if (a.pointsAwarded === null) throw new HttpError(400, `Ungraded answer ${a.id}`);
-        if (a.question.type === 'INPUT_ANSWER' && a.isCorrect === null) throw new HttpError(400, `Input answer ${a.id} missing manual grade`);
+        if (a.pointsAwarded === null) throw new HttpError(400, `Cannot finalize: answer ${a.id} is ungraded.`);
+        if (a.question.type === 'INPUT_ANSWER' && a.isCorrect === null) throw new HttpError(400, `Cannot finalize: input answer ${a.id} is missing a manual Correct/Incorrect grade.`);
         total += a.pointsAwarded;
         totalGraded += 1;
       }
@@ -73,5 +97,5 @@ export async function finalizeScores(questionSetId: string, user: CurrentUser) {
     }
     await tx.questionSet.update({ where: { id: questionSetId }, data: { status: 'SCORED' } });
   });
-  return { gradedSubmissions: qs.submissions.length, gradedAnswers: totalGraded, status: 'SCORED' };
+  return { questionSetId, questionSetStatus: 'SCORED', gradedSubmissions: qs.submissions.length, totalAnswersGraded: totalGraded };
 }
