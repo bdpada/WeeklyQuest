@@ -16,6 +16,7 @@ export type Question = {
   questionSetId: string;
   type: QuestionType;
   prompt: string;
+  points: number;
   order: number;
   createdAt: string;
   updatedAt: string;
@@ -48,6 +49,7 @@ export type QuestionSetInput = {
 export type QuestionInput = {
   type: QuestionType;
   prompt: string;
+  points?: number;
   order?: number;
 };
 

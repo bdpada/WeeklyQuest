@@ -187,9 +187,10 @@ export function AdminGroupDetailPage() {
                   <p className="mt-1 text-sm text-slate-600">{questionSet.weekLabel} · {questionSet.status}</p>
                   <p className="mt-1 text-xs text-slate-500">{questionSet.questions.length} question{questionSet.questions.length === 1 ? '' : 's'}</p>
                 </div>
-                <Link className="rounded-lg border border-slate-300 px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50" to={`/admin/question-sets/${questionSet.id}/edit`}>
-                  Edit
-                </Link>
+                <div className='flex gap-2'>
+                <Link className="rounded-lg border border-slate-300 px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50" to={`/admin/question-sets/${questionSet.id}/edit`}>Edit</Link>
+                <Link className="rounded-lg border border-indigo-300 px-3 py-2 text-sm font-medium text-indigo-700 hover:bg-indigo-50" to={`/admin/question-sets/${questionSet.id}/grading`}>Grading</Link>
+                </div>
               </div>
             </article>
           ))}

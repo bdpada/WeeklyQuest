@@ -127,8 +127,18 @@ export async function createQuestionSet(groupId: string, input: CreateQuestionSe
   });
 }
 
+
+function sanitizeQuestionSetForUser(questionSet: Awaited<ReturnType<typeof findQuestionSetForAccessOrThrow>>, user: CurrentUser) {
+  if (user.role === 'ADMIN' || questionSet.status === 'SCORED') return questionSet;
+  return {
+    ...questionSet,
+    questions: questionSet.questions.map((q) => ({ ...q, options: q.options.map((o) => ({ ...o, isCorrect: false })) })),
+  };
+}
+
 export async function getQuestionSet(questionSetId: string, user: CurrentUser) {
-  return findQuestionSetForAccessOrThrow(questionSetId, user);
+  const qs = await findQuestionSetForAccessOrThrow(questionSetId, user);
+  return sanitizeQuestionSetForUser(qs, user);
 }
 
 export async function updateQuestionSet(questionSetId: string, input: UpdateQuestionSetInput, user: CurrentUser) {
