@@ -85,6 +85,7 @@ export function DashboardPage() {
       <nav className="mt-8 flex flex-wrap gap-3 text-sm">
         <Link className="rounded-lg bg-indigo-50 px-4 py-2 font-medium text-indigo-700 hover:bg-indigo-100" to="/profile">Profile</Link>
         {isAdmin ? <Link className="rounded-lg bg-indigo-50 px-4 py-2 font-medium text-indigo-700 hover:bg-indigo-100" to="/admin">Admin</Link> : null}
+        <Link className="rounded-lg bg-indigo-50 px-4 py-2 font-medium text-indigo-700 hover:bg-indigo-100" to="/scores">My Scores</Link>
       </nav>
 
       <div className="mt-8 rounded-lg bg-slate-50 p-5 ring-1 ring-slate-200">
@@ -105,7 +106,7 @@ export function DashboardPage() {
                 {(visibleQuestionSets[group.id] ?? []).length === 0 ? <p className="mt-1 text-sm text-slate-500">No active or completed question sets yet.</p> : null}
                 <ul className="mt-2 grid gap-1 text-sm text-slate-600">
                   {(visibleQuestionSets[group.id] ?? []).map((questionSet) => (
-                    <li key={questionSet.id}><Link className='text-indigo-700 underline' to={`/question-sets/${questionSet.id}`}>{questionSet.weekLabel}: {questionSet.title}</Link> · due {new Date(questionSet.dueAt).toLocaleString()} · {statuses[questionSet.id] ?? 'Not Started'} {statuses[questionSet.id] === 'Results Available' ? '· View Results' : ''}</li>
+                    <li key={questionSet.id}><Link className='text-indigo-700 underline' to={`/question-sets/${questionSet.id}`}>{questionSet.weekLabel}: {questionSet.title}</Link> · due {new Date(questionSet.dueAt).toLocaleString()} · {statuses[questionSet.id] ?? 'Not Started'} {statuses[questionSet.id] === 'Results Available' ? '· View Results' : ''} {questionSet.status === 'SCORED' ? '' : ''} {questionSet.status === 'SCORED' ? <>· <Link className='text-indigo-700 underline' to={`/question-sets/${questionSet.id}/leaderboard`}>View Leaderboard</Link> · <Link className='text-indigo-700 underline' to={`/groups/${group.id}/leaderboard`}>Group Leaderboard</Link></> : null}</li>
                   ))}
                 </ul>
               </div>
