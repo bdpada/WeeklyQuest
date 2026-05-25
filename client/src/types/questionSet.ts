@@ -39,6 +39,7 @@ export type QuestionSet = {
   openAt: string;
   dueAt: string;
   status: QuestionSetStatus;
+  scoresNeedReview: boolean;
   createdAt: string;
   updatedAt: string;
   questions: Question[];

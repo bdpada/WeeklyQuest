@@ -15,8 +15,11 @@ export function AdminGradingPage() {
   const [manualErr, setManualErr] = useState('');
   const [finalizeMsg, setFinalizeMsg] = useState('');
   const [finalizeErr, setFinalizeErr] = useState('');
+  const [recalcMsg, setRecalcMsg] = useState('');
+  const [recalcErr, setRecalcErr] = useState('');
   const [savingAnswerId, setSavingAnswerId] = useState<string | null>(null);
   const [isFinalizing, setIsFinalizing] = useState(false);
+  const [isRecalculating, setIsRecalculating] = useState(false);
 
   const byQuestion = useMemo(() => {
     const m: Record<string, { submission: Submission; answer: Submission['answers'][number] }[]> = {};
@@ -32,45 +35,41 @@ export function AdminGradingPage() {
   useEffect(() => { void load().catch((e: Error) => setMsg(e.message)); }, [questionSetId]);
 
   const gradeInputAnswer = async (answerId: string, isCorrect: boolean, pointsAwarded: number) => {
-    setManualMsg('');
-    setManualErr('');
-    setSavingAnswerId(answerId);
-    try {
-      const response = await gradingApi.gradeInputAnswer(answerId, isCorrect, pointsAwarded);
-      setSubs((prev) => prev.map((submission) => ({
-        ...submission,
-        answers: submission.answers.map((answer) => answer.id === answerId ? { ...answer, isCorrect: response.answer.isCorrect, pointsAwarded: response.answer.pointsAwarded } : answer),
-      })));
-      setManualMsg('Manual grade saved.');
-    } catch (error) {
-      setManualErr((error as Error).message);
-    } finally {
-      setSavingAnswerId(null);
-    }
+    setManualMsg(''); setManualErr(''); setSavingAnswerId(answerId);
+    try { await gradingApi.gradeInputAnswer(answerId, isCorrect, pointsAwarded); await load(); setManualMsg('Manual grade saved.'); }
+    catch (error) { setManualErr((error as Error).message); } finally { setSavingAnswerId(null); }
   };
 
   const finalizeScores = async () => {
-    setFinalizeMsg('');
-    setFinalizeErr('');
-    setIsFinalizing(true);
+    setFinalizeMsg(''); setFinalizeErr(''); setIsFinalizing(true);
+    try { await gradingApi.finalizeScores(questionSetId); await load(); setFinalizeMsg('Scores finalized successfully. Results are now visible to users.'); }
+    catch (error) { setFinalizeErr((error as Error).message); } finally { setIsFinalizing(false); }
+  };
+
+  const recalculateScores = async () => {
+    setRecalcMsg(''); setRecalcErr(''); setIsRecalculating(true);
     try {
-      await gradingApi.finalizeScores(questionSetId);
+      const result = await gradingApi.recalculateScores(questionSetId);
       await load();
-      setFinalizeMsg('Scores finalized successfully. Results are now visible to users.');
-    } catch (error) {
-      setFinalizeErr((error as Error).message);
-    } finally {
-      setIsFinalizing(false);
-    }
+      setRecalcMsg(`Scores recalculated for ${result.recalculatedSubmissions} submissions. Updated ${result.totalAnswersUpdated} objective answers.`);
+    } catch (error) { setRecalcErr((error as Error).message); } finally { setIsRecalculating(false); }
   };
 
   if (!qs) return <p>Loading...</p>;
   const isScored = qs.status === 'SCORED';
 
   return <section className='rounded-xl bg-white p-6'><h1 className='text-2xl font-bold'>Grading: {qs.title}</h1><Link className='text-indigo-600 underline' to='/admin'>Back</Link>
-    <div className='my-4 flex gap-3'><button className='rounded bg-slate-200 px-3 py-2' onClick={() => void gradingApi.autoGradeOptionAnswers(questionSetId).then(() => load())}>Auto-grade option answers</button>{!isScored ? <button className='rounded bg-indigo-600 px-3 py-2 text-white disabled:cursor-not-allowed disabled:opacity-60' disabled={isFinalizing} onClick={() => { if (confirm('Finalize scores? This will release results to users.')) void finalizeScores(); }}>{isFinalizing ? 'Finalizing...' : 'Finalize scores'}</button> : null}</div>
+    {isScored ? <p className='mt-3 rounded border border-amber-300 bg-amber-50 p-2 text-sm text-amber-800'>This question set has already been scored. Changes made here may affect released user results.</p> : null}
+    {qs.scoresNeedReview ? <p className='mt-2 rounded border border-rose-300 bg-rose-50 p-2 text-sm text-rose-800'>Scores need recalculation. User totals may be out of date.</p> : null}
+    <div className='my-4 flex gap-3'>
+      <button className='rounded bg-slate-200 px-3 py-2' onClick={() => void gradingApi.autoGradeOptionAnswers(questionSetId).then(() => load())}>Auto-grade option answers</button>
+      {!isScored ? <button className='rounded bg-indigo-600 px-3 py-2 text-white disabled:cursor-not-allowed disabled:opacity-60' disabled={isFinalizing} onClick={() => { if (confirm('Finalize scores? This will release results to users.')) void finalizeScores(); }}>{isFinalizing ? 'Finalizing...' : 'Finalize scores'}</button> : null}
+      {isScored ? <button className='rounded bg-amber-600 px-3 py-2 text-white disabled:cursor-not-allowed disabled:opacity-60' disabled={isRecalculating} onClick={() => { if (confirm('Recalculate scores now? This may change released user totals.')) void recalculateScores(); }}>{isRecalculating ? 'Recalculating...' : 'Recalculate Scores'}</button> : null}
+    </div>
     {finalizeMsg ? <p className='mb-2 text-sm text-emerald-700'>{finalizeMsg}</p> : null}
     {finalizeErr ? <p className='mb-2 text-sm text-rose-700'>{finalizeErr}</p> : null}
+    {recalcMsg ? <p className='mb-2 text-sm text-emerald-700'>{recalcMsg}</p> : null}
+    {recalcErr ? <p className='mb-2 text-sm text-rose-700'>{recalcErr}</p> : null}
     {qs.questions.map((q) => <div key={q.id} className='mb-4 rounded border p-3'><p className='font-semibold'>{q.prompt} ({q.points} pts)</p>{q.type === 'INPUT_ANSWER' ? <div className='mt-2 space-y-2'>{(byQuestion[q.id] || []).map(({ submission, answer }) => {
       const isSaving = savingAnswerId === answer.id;
       const isCorrect = answer.isCorrect === true;

@@ -1,6 +1,6 @@
 import type { Request, Response } from 'express';
 import { HttpError } from '../utils/httpError.js';
-import { finalizeScores, gradeInputAnswer, gradeOptionAnswers, setCorrectOption } from '../services/grading.service.js';
+import { finalizeScores, gradeInputAnswer, gradeOptionAnswers, recalculateScores, setCorrectOption } from '../services/grading.service.js';
 
 const currentUser = (req: { user?: Request['user'] }) => { if (!req.user) throw new HttpError(401, 'Authentication required'); return req.user; };
 
@@ -20,4 +20,9 @@ export async function gradeOptionAnswersHandler(req: Request<{ questionSetId: st
 
 export async function finalizeScoresHandler(req: Request<{ questionSetId: string }>, res: Response) {
   res.status(200).json(await finalizeScores(req.params.questionSetId, currentUser(req)));
+}
+
+
+export async function recalculateScoresHandler(req: Request<{ questionSetId: string }>, res: Response) {
+  res.status(200).json(await recalculateScores(req.params.questionSetId, currentUser(req)));
 }
