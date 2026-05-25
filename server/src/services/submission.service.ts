@@ -7,6 +7,12 @@ type SaveAnswerInput = { questionId: string; selectedOptionId?: string; textAnsw
 
 const objectiveTypes: QuestionType[] = ['MULTIPLE_CHOICE', 'TRUE_FALSE', 'YES_NO'];
 
+function sanitizeAnswers<T extends { answers: any[]; questionSet?: { status: string } }>(submission: T | null, user: CurrentUser) {
+  if (!submission) return submission;
+  if (user.role === 'ADMIN' || submission.questionSet?.status === 'SCORED') return submission;
+  return { ...submission, answers: submission.answers.map((a) => ({ ...a, isCorrect: null, pointsAwarded: null })) };
+}
+
 async function getQuestionSetForUser(questionSetId: string, user: CurrentUser) {
   const qs = await prisma.questionSet.findFirst({
     where: {
@@ -23,8 +29,9 @@ async function getQuestionSetForUser(questionSetId: string, user: CurrentUser) {
 function assertBeforeDue(dueAt: Date) { if (Date.now() > dueAt.getTime()) throw new HttpError(409, 'Deadline passed'); }
 
 export async function getMySubmission(questionSetId: string, user: CurrentUser) {
-  await getQuestionSetForUser(questionSetId, user);
-  return prisma.submission.findUnique({ where: { userId_questionSetId: { userId: user.id, questionSetId } }, include: { answers: true } });
+  const qs = await getQuestionSetForUser(questionSetId, user);
+  const submission = await prisma.submission.findUnique({ where: { userId_questionSetId: { userId: user.id, questionSetId } }, include: { answers: true } });
+  return sanitizeAnswers(submission ? { ...submission, questionSet: { status: qs.status } } : null, user);
 }
 
 export async function createSubmission(questionSetId: string, user: CurrentUser) {
@@ -92,4 +99,4 @@ export async function listQuestionSetSubmissions(questionSetId: string, user: Cu
   return prisma.submission.findMany({ where: { questionSetId }, include: { user: { select: { id: true, email: true, name: true } }, answers: true }, orderBy: [{ submittedAt: 'desc' }, { createdAt: 'desc' }] });
 }
 
-export async function getSubmission(submissionId: string, user: CurrentUser) { return getOwnedSubmission(submissionId, user); }
+export async function getSubmission(submissionId: string, user: CurrentUser) { const s = await getOwnedSubmission(submissionId, user); return sanitizeAnswers(s, user); }

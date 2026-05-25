@@ -10,6 +10,7 @@ import { ProfilePage } from './pages/ProfilePage';
 import { RegisterPage } from './pages/RegisterPage';
 import { QuestionSetEditorPage } from './pages/QuestionSetEditorPage';
 import { QuestionSetSubmissionPage } from './pages/QuestionSetSubmissionPage';
+import { AdminGradingPage } from './pages/AdminGradingPage';
 
 function App() {
   return (
@@ -29,6 +30,7 @@ function App() {
               <Route path="/admin/groups/:groupId" element={<AdminGroupDetailPage />} />
               <Route path="/admin/groups/:groupId/question-sets/new" element={<QuestionSetEditorPage />} />
               <Route path="/admin/question-sets/:questionSetId/edit" element={<QuestionSetEditorPage />} />
+              <Route path="/admin/question-sets/:questionSetId/grading" element={<AdminGradingPage />} />
             </Route>
           </Route>
         </Routes>
