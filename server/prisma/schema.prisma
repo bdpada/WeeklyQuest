@@ -90,7 +90,8 @@ model QuestionSet {
   weekLabel   String
   openAt      DateTime
   dueAt       DateTime
-  status      QuestionSetStatus @default(DRAFT)
+  status           QuestionSetStatus @default(DRAFT)
+  scoresNeedReview Boolean           @default(false)
   createdAt   DateTime          @default(now())
   updatedAt   DateTime          @updatedAt
   group       Group             @relation(fields: [groupId], references: [id], onDelete: Cascade)
