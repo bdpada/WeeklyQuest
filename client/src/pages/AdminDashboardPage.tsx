@@ -8,6 +8,7 @@ export function AdminDashboardPage() {
       <p className="mt-4 text-slate-600">Admin access is protected. Use groups to organize WeeklyQuest members.</p>
       <nav className="mt-8 flex flex-wrap gap-3">
         <Link className="rounded-lg bg-indigo-600 px-4 py-2 font-semibold text-white hover:bg-indigo-700" to="/admin/groups">Manage groups</Link>
+        <Link className="rounded-lg bg-slate-900 px-4 py-2 font-semibold text-white hover:bg-black" to="/admin/users">Manage users</Link>
         <Link className="rounded-lg border border-slate-300 px-4 py-2 font-semibold text-slate-700 hover:bg-slate-50" to="/dashboard">Back to dashboard</Link>
       </nav>
     </section>

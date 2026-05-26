@@ -14,6 +14,8 @@ import { AdminGradingPage } from './pages/AdminGradingPage';
 import { GroupLeaderboardPage } from './pages/GroupLeaderboardPage';
 import { QuestionSetLeaderboardPage } from './pages/QuestionSetLeaderboardPage';
 import { ScoreHistoryPage } from './pages/ScoreHistoryPage';
+import { AdminUsersPage } from './pages/AdminUsersPage';
+import { AdminUserDetailPage } from './pages/AdminUserDetailPage';
 
 function App() {
   return (
@@ -33,6 +35,8 @@ function App() {
             <Route element={<AdminRoute />}>
               <Route path="/admin" element={<AdminDashboardPage />} />
               <Route path="/admin/groups" element={<AdminGroupsPage />} />
+              <Route path="/admin/users" element={<AdminUsersPage />} />
+              <Route path="/admin/users/:userId" element={<AdminUserDetailPage />} />
               <Route path="/admin/groups/:groupId" element={<AdminGroupDetailPage />} />
               <Route path="/admin/groups/:groupId/question-sets/new" element={<QuestionSetEditorPage />} />
               <Route path="/admin/question-sets/:questionSetId/edit" element={<QuestionSetEditorPage />} />

@@ -67,6 +67,10 @@ export async function loginUser(input: LoginInput) {
     throw new HttpError(401, 'Invalid email or password');
   }
 
+  if (!user.isActive) {
+    throw new HttpError(403, 'Your account is inactive. Contact an administrator.');
+  }
+
   const passwordMatches = await bcrypt.compare(input.password, user.passwordHash);
 
   if (!passwordMatches) {
@@ -99,6 +103,10 @@ export async function getUserById(userId: string) {
 
   if (!user) {
     throw new HttpError(401, 'User account no longer exists');
+  }
+
+  if (!user.isActive) {
+    throw new HttpError(403, 'Your account is inactive. Contact an administrator.');
   }
 
   return toSafeUser(user);
