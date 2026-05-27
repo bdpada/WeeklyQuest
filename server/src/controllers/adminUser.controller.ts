@@ -6,8 +6,11 @@ import {
   listAdminUserGroups,
   listAdminUsers,
   removeAdminUserGroup,
+  updateAdminUserEmail,
+  updateAdminUserProfile,
   updateAdminUserRole,
   updateAdminUserStatus,
+  resetAdminUserPassword,
 } from '../services/adminUser.service.js';
 
 function currentUser(req: { user?: Request['user'] }) {
@@ -48,4 +51,20 @@ export async function addGroup(req: Request<{ userId: string }, object, { groupI
 export async function removeGroup(req: Request<{ userId: string; groupId: string }>, res: Response) {
   await removeAdminUserGroup(req.params.userId, req.params.groupId, currentUser(req));
   res.status(204).send();
+}
+
+
+export async function updateProfile(req: Request<{ userId: string }, object, { displayName: string }>, res: Response) {
+  const user = await updateAdminUserProfile(req.params.userId, req.body.displayName, currentUser(req));
+  res.status(200).json({ user });
+}
+
+export async function updateEmail(req: Request<{ userId: string }, object, { email: string }>, res: Response) {
+  const user = await updateAdminUserEmail(req.params.userId, req.body.email, currentUser(req));
+  res.status(200).json({ user });
+}
+
+export async function resetPassword(req: Request<{ userId: string }, object, { newPassword: string }>, res: Response) {
+  await resetAdminUserPassword(req.params.userId, req.body.newPassword, currentUser(req));
+  res.status(200).json({ message: "Password reset successfully" });
 }

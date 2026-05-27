@@ -28,6 +28,24 @@ export const updateAdminUserStatusSchema = z.object({
   query: z.object({}),
 });
 
+export const updateAdminUserProfileSchema = z.object({
+  body: z.object({ displayName: z.string().trim().min(1, 'Display name is required') }),
+  params: userIdParam,
+  query: z.object({}),
+});
+
+export const updateAdminUserEmailSchema = z.object({
+  body: z.object({ email: z.string().trim().email('Please provide a valid email address') }),
+  params: userIdParam,
+  query: z.object({}),
+});
+
+export const resetAdminUserPasswordSchema = z.object({
+  body: z.object({ newPassword: z.string().min(8, 'New password must be at least 8 characters') }),
+  params: userIdParam,
+  query: z.object({}),
+});
+
 export const addAdminUserGroupSchema = z.object({
   body: z.object({ groupId: z.string().min(1, 'Group id is required') }),
   params: userIdParam,
