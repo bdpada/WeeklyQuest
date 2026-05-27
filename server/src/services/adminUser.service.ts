@@ -1,3 +1,4 @@
+import bcrypt from 'bcrypt';
 import { Prisma } from '@prisma/client';
 import { prisma } from '../utils/prismaClient.js';
 import { HttpError } from '../utils/httpError.js';
@@ -13,6 +14,9 @@ type AdminSafeUser = {
   createdAt: Date;
   updatedAt: Date;
 };
+
+
+const SALT_ROUNDS = 12;
 
 const safeUserSelect = {
   id: true,
@@ -74,6 +78,45 @@ export async function updateAdminUserStatus(userId: string, isActive: boolean, c
   await getAdminUserById(userId, currentUser);
   const updated = await prisma.user.update({ where: { id: userId }, data: { isActive }, select: safeUserSelect });
   return toAdminSafeUser(updated);
+}
+
+
+export async function updateAdminUserProfile(userId: string, displayName: string, currentUser: CurrentUser) {
+  requireAdmin(currentUser);
+  await getAdminUserById(userId, currentUser);
+  const updated = await prisma.user.update({
+    where: { id: userId },
+    data: { name: displayName.trim() },
+    select: safeUserSelect,
+  });
+  return toAdminSafeUser(updated);
+}
+
+export async function updateAdminUserEmail(userId: string, email: string, currentUser: CurrentUser) {
+  requireAdmin(currentUser);
+  await getAdminUserById(userId, currentUser);
+  const normalizedEmail = email.trim().toLowerCase();
+
+  try {
+    const updated = await prisma.user.update({
+      where: { id: userId },
+      data: { email: normalizedEmail },
+      select: safeUserSelect,
+    });
+    return toAdminSafeUser(updated);
+  } catch (error) {
+    if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2002') {
+      throw new HttpError(409, 'That email address is already in use');
+    }
+    throw error;
+  }
+}
+
+export async function resetAdminUserPassword(userId: string, newPassword: string, currentUser: CurrentUser) {
+  requireAdmin(currentUser);
+  await getAdminUserById(userId, currentUser);
+  const passwordHash = await bcrypt.hash(newPassword, SALT_ROUNDS);
+  await prisma.user.update({ where: { id: userId }, data: { passwordHash } });
 }
 
 export async function listAdminUserGroups(userId: string, currentUser: CurrentUser) {

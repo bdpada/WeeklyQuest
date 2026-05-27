@@ -18,6 +18,18 @@ export function updateAdminUserStatus(userId: string, isActive: boolean) {
   return apiClient<{ user: AdminUser }>(`/admin/users/${userId}/status`, { method: 'PUT', body: { isActive } });
 }
 
+export function updateAdminUserProfile(userId: string, displayName: string) {
+  return apiClient<{ user: AdminUser }>(`/admin/users/${userId}/profile`, { method: 'PUT', body: { displayName } });
+}
+
+export function updateAdminUserEmail(userId: string, email: string) {
+  return apiClient<{ user: AdminUser }>(`/admin/users/${userId}/email`, { method: 'PUT', body: { email } });
+}
+
+export function resetAdminUserPassword(userId: string, newPassword: string) {
+  return apiClient<{ message: string }>(`/admin/users/${userId}/password`, { method: 'PUT', body: { newPassword } });
+}
+
 export function listAdminUserGroups(userId: string) {
   return apiClient<{ groups: AdminUserGroupMembership[] }>(`/admin/users/${userId}/groups`);
 }

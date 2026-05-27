@@ -1,9 +1,10 @@
 import { useEffect, useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { listAdminUsers } from '../services/adminUserApi';
 import type { AdminUser } from '../types/adminUser';
 
 export function AdminUsersPage() {
+  const navigate = useNavigate();
   const [search, setSearch] = useState('');
   const [users, setUsers] = useState<AdminUser[]>([]);
   const [loading, setLoading] = useState(true);
@@ -19,7 +20,7 @@ export function AdminUsersPage() {
   useEffect(() => { void load(); }, []);
 
   return <section className="rounded-xl bg-white p-6 shadow-sm ring-1 ring-slate-200">
-    <h1 className="text-2xl font-bold text-slate-900">Manage Users</h1>
+    <div className="flex items-center justify-between gap-3"><h1 className="text-2xl font-bold text-slate-900">Manage Users</h1><button type="button" onClick={() => navigate('/admin')} className="rounded border border-slate-300 px-3 py-2 text-sm text-slate-700 hover:bg-slate-50">Back to Admin Portal</button></div>
     <div className="mt-4 flex gap-2"><input value={search} onChange={(e)=>setSearch(e.target.value)} placeholder="Search by name or email" className="w-full rounded border border-slate-300 px-3 py-2"/><button onClick={()=>void load()} className="rounded bg-indigo-600 px-4 py-2 text-white">Search</button></div>
     {loading && <p className="mt-4">Loading users...</p>}
     {error && <p className="mt-4 text-red-600">{error}</p>}
