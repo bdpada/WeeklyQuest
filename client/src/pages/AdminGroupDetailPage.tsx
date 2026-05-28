@@ -3,6 +3,8 @@ import { Link, useNavigate, useParams } from 'react-router-dom';
 import { groupApi } from '../services/groupApi';
 import { membershipApi } from '../services/membershipApi';
 import { questionSetApi } from '../services/questionSetApi';
+import { inviteApi } from '../services/inviteApi';
+import type { Invite } from '../types/invite';
 import type { Group } from '../types/group';
 import type { QuestionSet } from '../types/questionSet';
 
@@ -17,6 +19,9 @@ export function AdminGroupDetailPage() {
   const [isAdding, setIsAdding] = useState(false);
   const [questionSets, setQuestionSets] = useState<QuestionSet[]>([]);
   const [isLoadingQuestionSets, setIsLoadingQuestionSets] = useState(true);
+  const [invites, setInvites] = useState<Invite[]>([]);
+  const [inviteEmail, setInviteEmail] = useState('');
+  const [isCreatingInvite, setIsCreatingInvite] = useState(false);
 
   async function loadGroup() {
     if (!groupId) {
@@ -24,12 +29,14 @@ export function AdminGroupDetailPage() {
     }
 
     setError('');
-    const [groupResponse, questionSetsResponse] = await Promise.all([
+    const [groupResponse, questionSetsResponse, invitesResponse] = await Promise.all([
       groupApi.get(groupId),
       questionSetApi.listForGroup(groupId),
+      inviteApi.listForGroup(groupId),
     ]);
     setGroup(groupResponse.group);
     setQuestionSets(questionSetsResponse.questionSets);
+    setInvites(invitesResponse.invites);
   }
 
   useEffect(() => {
@@ -83,6 +90,41 @@ export function AdminGroupDetailPage() {
     } catch (removeError) {
       setError(removeError instanceof Error ? removeError.message : 'Unable to remove member');
     }
+  }
+
+
+
+  async function handleCreateInvite(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (!groupId) return;
+    setError(''); setSuccess(''); setIsCreatingInvite(true);
+    try {
+      const response = await inviteApi.createForGroup(groupId, inviteEmail);
+      setInvites((curr)=>[response.invite, ...curr]);
+      setInviteEmail('');
+      setSuccess('Invite created successfully.');
+    } catch (createError) {
+      setError(createError instanceof Error ? createError.message : 'Unable to create invite');
+    } finally { setIsCreatingInvite(false); }
+  }
+
+  async function handleRevokeInvite(inviteId: string) {
+    setError(''); setSuccess('');
+    try {
+      const response = await inviteApi.revoke(inviteId);
+      setInvites((curr)=>curr.map((invite)=>invite.id === inviteId ? response.invite : invite));
+      setSuccess('Invite revoked successfully.');
+    } catch (revokeError) {
+      setError(revokeError instanceof Error ? revokeError.message : 'Unable to revoke invite');
+    }
+  }
+
+  async function handleCopyInvite(url?: string | null) {
+    if (!url) return;
+    try {
+      if (navigator.clipboard?.writeText) { await navigator.clipboard.writeText(url); setSuccess('Invite link copied.'); }
+      else setError('Clipboard API unavailable in this browser.');
+    } catch { setError('Unable to copy invite link.'); }
   }
 
   async function handleDeleteGroup() {
@@ -197,6 +239,30 @@ export function AdminGroupDetailPage() {
           ))}
         </div>
       </div>
+
+
+      <div className="mt-8 rounded-lg bg-slate-50 p-5 ring-1 ring-slate-200">
+        <h2 className="text-xl font-semibold text-slate-900">Invites</h2>
+        <form className="mt-4 flex flex-col gap-3 sm:flex-row sm:items-end" onSubmit={handleCreateInvite}>
+          <label className="grid flex-1 gap-2 text-sm font-medium text-slate-700">
+            Invite email
+            <input className="rounded-lg border border-slate-300 px-3 py-2" type="email" value={inviteEmail} onChange={(event) => setInviteEmail(event.target.value)} required placeholder="invitee@example.com" />
+          </label>
+          <button className="rounded-lg bg-indigo-600 px-4 py-2 font-semibold text-white disabled:bg-indigo-300" disabled={isCreatingInvite} type="submit">{isCreatingInvite ? 'Creating...' : 'Create invite'}</button>
+        </form>
+        {invites.length === 0 ? <p className="mt-4 text-slate-600">No invites yet.</p> : null}
+        <div className="mt-4 grid gap-2">
+          {invites.map((invite) => <article key={invite.id} className="rounded-lg border border-slate-200 bg-white p-3">
+            <p className="text-sm font-medium text-slate-800">{invite.email} · <span className="font-semibold">{invite.status}</span></p>
+            <p className="text-xs text-slate-500">Expires {new Date(invite.expiresAt).toLocaleString()}</p>
+            <div className="mt-2 flex gap-2">
+              {invite.status === 'PENDING' && invite.inviteUrl ? <button className="rounded border border-slate-300 px-2 py-1 text-sm" onClick={() => void handleCopyInvite(invite.inviteUrl)} type="button">Copy Link</button> : null}
+              {invite.status === 'PENDING' ? <button className="rounded border border-red-300 px-2 py-1 text-sm text-red-700" onClick={() => void handleRevokeInvite(invite.id)} type="button">Revoke</button> : null}
+            </div>
+          </article>)}
+        </div>
+      </div>
+
       <div className="mt-8">
         <h2 className="text-xl font-semibold text-slate-900">Members</h2>
         {group.memberships.length === 0 ? <p className="mt-4 text-slate-600">This group has no members.</p> : null}

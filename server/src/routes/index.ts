@@ -9,6 +9,7 @@ import { gradingRouter } from './grading.routes.js';
 import { leaderboardRouter } from './leaderboard.routes.js';
 import { adminUserRouter } from './adminUser.routes.js';
 import { userRouter } from './user.routes.js';
+import { inviteRouter } from './invite.routes.js';
 
 export const apiRouter = Router();
 
@@ -25,3 +26,4 @@ apiRouter.use(leaderboardRouter);
 apiRouter.use(userRouter);
 
 apiRouter.use('/admin', adminUserRouter);
+apiRouter.use(inviteRouter);
