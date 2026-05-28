@@ -1,10 +1,12 @@
 import { useEffect, useMemo, useState, type FormEvent } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { getMyProfile, updateMyPassword, updateMyProfile } from '../services/userApi';
+import { getMyProfile, updateMyEmail, updateMyPassword, updateMyProfile } from '../services/userApi';
 import type { UserProfile } from '../types/user';
+import { useAuth } from '../hooks/useAuth';
 
 export function ProfilePage() {
   const navigate = useNavigate();
+  const { updateUser } = useAuth();
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [pageError, setPageError] = useState<string | null>(null);
 
@@ -20,12 +22,19 @@ export function ProfilePage() {
   const [passwordMessage, setPasswordMessage] = useState<string | null>(null);
   const [passwordError, setPasswordError] = useState<string | null>(null);
 
+  const [newEmail, setNewEmail] = useState('');
+  const [emailCurrentPassword, setEmailCurrentPassword] = useState('');
+  const [emailLoading, setEmailLoading] = useState(false);
+  const [emailMessage, setEmailMessage] = useState<string | null>(null);
+  const [emailError, setEmailError] = useState<string | null>(null);
+
   useEffect(() => {
     void (async () => {
       try {
         const response = await getMyProfile();
         setProfile(response.user);
         setDisplayName(response.user.displayName);
+        setNewEmail(response.user.email);
       } catch (error) {
         setPageError(error instanceof Error ? error.message : 'Unable to load your profile');
       }
@@ -46,11 +55,55 @@ export function ProfilePage() {
       const response = await updateMyProfile(displayName);
       setProfile(response.user);
       setDisplayName(response.user.displayName);
+      setNewEmail(response.user.email);
+      updateUser({ id: response.user.id, email: response.user.email, name: response.user.displayName, role: response.user.role });
       setProfileMessage('Display name updated.');
     } catch (error) {
       setProfileError(error instanceof Error ? error.message : 'Failed to update display name');
     } finally {
       setProfileLoading(false);
+    }
+  }
+
+
+
+  async function handleEmailSubmit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setEmailMessage(null);
+    setEmailError(null);
+
+    if (!newEmail.trim()) {
+      setEmailError('New email is required.');
+      return;
+    }
+
+    const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailPattern.test(newEmail.trim())) {
+      setEmailError('Please enter a valid email address.');
+      return;
+    }
+
+    if (!emailCurrentPassword) {
+      setEmailError('Current password is required.');
+      return;
+    }
+
+    if (!window.confirm('Are you sure you want to change your login email address?')) {
+      return;
+    }
+
+    setEmailLoading(true);
+    try {
+      const response = await updateMyEmail(newEmail.trim(), emailCurrentPassword);
+      setProfile(response.user);
+      setNewEmail(response.user.email);
+      setEmailCurrentPassword('');
+      updateUser({ id: response.user.id, email: response.user.email, name: response.user.displayName, role: response.user.role });
+      setEmailMessage('Email updated successfully.');
+    } catch (error) {
+      setEmailError(error instanceof Error ? error.message : 'Failed to change email');
+    } finally {
+      setEmailLoading(false);
     }
   }
 
@@ -114,6 +167,25 @@ export function ProfilePage() {
             {profileMessage && <p className="text-sm text-emerald-700">{profileMessage}</p>}
             {profileError && <p className="text-sm text-red-600">{profileError}</p>}
             <button type="submit" disabled={profileLoading} className="rounded-lg bg-indigo-600 px-4 py-2 font-semibold text-white hover:bg-indigo-700 disabled:opacity-70">{profileLoading ? 'Saving...' : 'Save'}</button>
+          </form>
+
+          <form className="mt-10 space-y-4" onSubmit={handleEmailSubmit}>
+            <h2 className="text-lg font-semibold text-slate-900">Change email</h2>
+            <div>
+              <label className="block text-sm font-medium text-slate-700" htmlFor="currentEmail">Current email</label>
+              <input id="currentEmail" value={profile.email} readOnly className="w-full rounded-lg border border-slate-300 bg-slate-100 px-3 py-2 text-slate-600" />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-slate-700" htmlFor="newEmail">New email</label>
+              <input id="newEmail" type="email" value={newEmail} onChange={(e) => setNewEmail(e.target.value)} className="w-full rounded-lg border border-slate-300 px-3 py-2" />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-slate-700" htmlFor="emailCurrentPassword">Current password</label>
+              <input id="emailCurrentPassword" type="password" value={emailCurrentPassword} onChange={(e) => setEmailCurrentPassword(e.target.value)} className="w-full rounded-lg border border-slate-300 px-3 py-2" />
+            </div>
+            {emailMessage && <p className="text-sm text-emerald-700">{emailMessage}</p>}
+            {emailError && <p className="text-sm text-red-600">{emailError}</p>}
+            <button type="submit" disabled={emailLoading} className="rounded-lg bg-indigo-600 px-4 py-2 font-semibold text-white hover:bg-indigo-700 disabled:opacity-70">{emailLoading ? 'Changing...' : 'Change Email'}</button>
           </form>
 
           <form className="mt-10 space-y-4" onSubmit={handlePasswordSubmit}>

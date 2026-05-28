@@ -34,6 +34,7 @@ type AuthContextValue = {
   register: (input: RegisterInput) => Promise<void>;
   logout: () => Promise<void>;
   refreshUser: () => Promise<void>;
+  updateUser: (nextUser: AuthUser) => void;
 };
 
 const AuthContext = createContext<AuthContextValue | undefined>(undefined);
@@ -86,6 +87,7 @@ export function AuthProvider({ children }: PropsWithChildren) {
       register,
       logout,
       refreshUser,
+      updateUser: setUser,
     }),
     [isLoading, login, logout, refreshUser, register, user],
   );

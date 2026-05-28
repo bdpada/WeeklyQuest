@@ -22,3 +22,13 @@ export const updateMyPasswordSchema = z.object({
   params: z.object({}),
   query: z.object({}),
 });
+
+
+export const updateMyEmailSchema = z.object({
+  body: z.object({
+    email: z.string().trim().email('Please provide a valid email address'),
+    currentPassword: z.string().min(1, 'Current password is required'),
+  }),
+  params: z.object({}),
+  query: z.object({}),
+});
