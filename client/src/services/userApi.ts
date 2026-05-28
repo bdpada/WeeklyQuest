@@ -18,3 +18,10 @@ export function updateMyPassword(currentPassword: string, newPassword: string) {
     body: { currentPassword, newPassword },
   });
 }
+
+export function updateMyEmail(email: string, currentPassword: string) {
+  return apiClient<{ user: UserProfile }>('/users/me/email', {
+    method: 'PUT',
+    body: { email, currentPassword },
+  });
+}

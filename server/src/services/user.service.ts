@@ -70,3 +70,32 @@ export async function changeCurrentUserPassword(input: { currentPassword: string
   const passwordHash = await bcrypt.hash(input.newPassword, SALT_ROUNDS);
   await prisma.user.update({ where: { id: user.id }, data: { passwordHash } });
 }
+
+
+export async function changeCurrentUserEmail(input: { email: string; currentPassword: string }, currentUser: CurrentUser) {
+  const user = await prisma.user.findUnique({ where: { id: currentUser.id } });
+  if (!user) throw new HttpError(401, 'User account no longer exists');
+  if (!user.isActive) throw new HttpError(403, 'Your account is inactive. Contact an administrator.');
+
+  const passwordMatches = await bcrypt.compare(input.currentPassword, user.passwordHash);
+  if (!passwordMatches) throw new HttpError(401, 'Current password is incorrect');
+
+  const normalizedEmail = input.email.trim().toLowerCase();
+  const existingUser = await prisma.user.findFirst({
+    where: {
+      email: normalizedEmail,
+      NOT: { id: user.id },
+    },
+    select: { id: true },
+  });
+
+  if (existingUser) throw new HttpError(409, 'That email address is already in use');
+
+  const updated = await prisma.user.update({
+    where: { id: user.id },
+    data: { email: normalizedEmail },
+    select: safeUserSelect,
+  });
+
+  return toProfileSafeUser(updated);
+}
