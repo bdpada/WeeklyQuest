@@ -20,10 +20,11 @@ apiRouter.use('/groups', groupRouter);
 apiRouter.use('/question-sets', questionSetRouter);
 apiRouter.use(questionRouter);
 apiRouter.use(submissionRouter);
+apiRouter.use(inviteRouter);
+
 apiRouter.use(gradingRouter);
 apiRouter.use(leaderboardRouter);
 
 apiRouter.use(userRouter);
 
 apiRouter.use('/admin', adminUserRouter);
-apiRouter.use(inviteRouter);
