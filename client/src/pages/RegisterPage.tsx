@@ -7,6 +7,7 @@ export function RegisterPage() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const returnTo = searchParams.get('returnTo');
+  const inviteToken = searchParams.get('inviteToken');
   const [name, setName] = useState('');
   const [email, setEmail] = useState(searchParams.get('email') ?? '');
   const [password, setPassword] = useState('');
@@ -28,7 +29,7 @@ export function RegisterPage() {
 
     try {
       await register({ email, password, name: name.trim() || undefined });
-      navigate(returnTo || '/dashboard', { replace: true });
+      navigate(inviteToken ? `/invite/${inviteToken}` : returnTo || '/dashboard', { replace: true });
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Unable to create account');
     } finally {
@@ -41,6 +42,11 @@ export function RegisterPage() {
       <p className="text-sm font-semibold uppercase tracking-wide text-indigo-600">WeeklyQuest</p>
       <h1 className="mt-2 text-3xl font-bold text-slate-900">Register</h1>
       <p className="mt-3 text-slate-600">Create your account to start answering weekly quests.</p>
+      {inviteToken ? (
+        <p className="mt-4 rounded-lg bg-indigo-50 p-3 text-sm text-indigo-800">
+          Use the invited email address to create your account. After registration, we will return you to your invite.
+        </p>
+      ) : null}
 
       <form className="mt-8 space-y-5" onSubmit={handleSubmit}>
         <div>
@@ -95,7 +101,7 @@ export function RegisterPage() {
       </form>
 
       <p className="mt-6 text-sm text-slate-600">
-        Already have an account? <Link className="font-medium text-indigo-600 hover:text-indigo-700" to="/login">Log in</Link>
+        Already have an account? <Link className="font-medium text-indigo-600 hover:text-indigo-700" to={inviteToken ? `/login?redirect=${encodeURIComponent(`/invite/${inviteToken}`)}` : '/login'}>Log in</Link>
       </p>
     </section>
   );

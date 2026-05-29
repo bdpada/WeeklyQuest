@@ -1,5 +1,5 @@
 import { useState, type FormEvent } from 'react';
-import { Link, Navigate, useLocation, useNavigate } from 'react-router-dom';
+import { Link, Navigate, useLocation, useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
 
 type LocationState = {
@@ -8,10 +8,20 @@ type LocationState = {
   };
 };
 
+function getSafeRedirect(redirect: string | null) {
+  if (redirect?.startsWith('/') && !redirect.startsWith('//')) {
+    return redirect;
+  }
+
+  return null;
+}
+
 export function LoginPage() {
   const { isAuthenticated, isLoading, login } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
+  const [searchParams] = useSearchParams();
+  const redirect = getSafeRedirect(searchParams.get('redirect'));
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
@@ -33,7 +43,7 @@ export function LoginPage() {
     try {
       await login({ email, password });
       const state = location.state as LocationState | null;
-      navigate(state?.from?.pathname ?? '/dashboard', { replace: true });
+      navigate(redirect ?? state?.from?.pathname ?? '/dashboard', { replace: true });
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Unable to log in');
     } finally {
@@ -86,7 +96,7 @@ export function LoginPage() {
       </form>
 
       <p className="mt-6 text-sm text-slate-600">
-        New to WeeklyQuest? <Link className="font-medium text-indigo-600 hover:text-indigo-700" to="/register">Create an account</Link>
+        New to WeeklyQuest? <Link className="font-medium text-indigo-600 hover:text-indigo-700" to={redirect ? `/register?returnTo=${encodeURIComponent(redirect)}` : '/register'}>Create an account</Link>
       </p>
     </section>
   );
