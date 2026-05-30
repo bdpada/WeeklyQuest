@@ -1,6 +1,6 @@
 import type { Request, Response } from 'express';
 import { HttpError } from '../utils/httpError.js';
-import { acceptInviteByToken, createInvite, getInviteByToken, listInvitesForGroup, revokeInvite } from '../services/invite.service.js';
+import { acceptInviteByToken, createInvite, getInviteByToken, listInvitesForGroup, listPendingInvitesForUser, revokeInvite } from '../services/invite.service.js';
 
 function currentUser(req: { user?: Request['user'] }) {
   if (!req.user) throw new HttpError(401, 'Authentication required');
@@ -25,6 +25,11 @@ export async function revoke(req: Request<{ inviteId: string }>, res: Response) 
 export async function getByToken(req: Request<{ token: string }>, res: Response) {
   const invite = await getInviteByToken(req.params.token);
   res.status(200).json({ invite });
+}
+
+export async function listMinePending(req: Request, res: Response) {
+  const invites = await listPendingInvitesForUser(currentUser(req));
+  res.status(200).json({ invites });
 }
 
 export async function acceptByToken(req: Request<{ token: string }>, res: Response) {

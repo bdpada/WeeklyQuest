@@ -25,3 +25,15 @@ export type PublicInviteDetails = {
   expiresAt: string;
   group: { id: string; name: string };
 };
+
+
+export type PendingInvite = {
+  id: string;
+  token: string;
+  email: string;
+  status: 'PENDING';
+  expiresAt: string;
+  createdAt: string;
+  inviteUrl: string;
+  group: { id: string; name: string; description?: string | null };
+};

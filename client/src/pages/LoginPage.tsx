@@ -32,7 +32,7 @@ export function LoginPage() {
   }
 
   if (isAuthenticated) {
-    return <Navigate to="/dashboard" replace />;
+    return <Navigate to={redirect ?? '/dashboard'} replace />;
   }
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
