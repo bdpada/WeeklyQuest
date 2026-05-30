@@ -6,6 +6,7 @@ config({ path: '../.env' });
 
 const envSchema = z.object({
   CLIENT_ORIGIN: z.string().url().default('http://localhost:5173'),
+  COOKIE_SECRET: z.string().min(1, 'COOKIE_SECRET is required'),
   DATABASE_URL: z.string().min(1, 'DATABASE_URL is required'),
   JWT_SECRET: z.string().min(1, 'JWT_SECRET is required'),
   NODE_ENV: z.enum(['development', 'test', 'production']).default('development'),
