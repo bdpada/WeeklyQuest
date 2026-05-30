@@ -16,11 +16,13 @@ export const apiRouter = Router();
 apiRouter.use(healthRouter);
 apiRouter.use('/auth', authRouter);
 
+// Keep public invite-token lookup ahead of root-mounted routers that attach auth middleware.
+apiRouter.use(inviteRouter);
+
 apiRouter.use('/groups', groupRouter);
 apiRouter.use('/question-sets', questionSetRouter);
 apiRouter.use(questionRouter);
 apiRouter.use(submissionRouter);
-apiRouter.use(inviteRouter);
 
 apiRouter.use(gradingRouter);
 apiRouter.use(leaderboardRouter);
