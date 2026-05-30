@@ -19,10 +19,10 @@ function buildInviteUrl(token: string) {
 }
 
 async function markExpiredIfNeeded(token: string) {
-  const invite = await prisma.invite.findUnique({ where: { token }, include: { group: { select: { id: true, name: true } } } });
+  const invite = await prisma.invite.findUnique({ where: { token }, include: { group: { select: { id: true, name: true, description: true } } } });
   if (!invite) throw new HttpError(404, 'Invalid invite token');
   if (invite.status === InviteStatus.PENDING && invite.expiresAt < new Date()) {
-    return prisma.invite.update({ where: { id: invite.id }, data: { status: InviteStatus.EXPIRED }, include: { group: { select: { id: true, name: true } } } });
+    return prisma.invite.update({ where: { id: invite.id }, data: { status: InviteStatus.EXPIRED }, include: { group: { select: { id: true, name: true, description: true } } } });
   }
   return invite;
 }
@@ -71,6 +71,40 @@ export async function revokeInvite(inviteId: string, user: CurrentUser) {
   if (!invite) throw new HttpError(404, 'Invite not found');
   if (invite.status !== InviteStatus.PENDING) throw new HttpError(400, 'Only pending invites can be revoked');
   return prisma.invite.update({ where: { id: inviteId }, data: { status: InviteStatus.REVOKED } });
+}
+
+export async function listPendingInvitesForUser(user: CurrentUser) {
+  const now = new Date();
+  const email = user.email.trim();
+
+  await prisma.invite.updateMany({
+    where: {
+      email: { equals: email, mode: 'insensitive' },
+      status: InviteStatus.PENDING,
+      expiresAt: { lte: now },
+    },
+    data: { status: InviteStatus.EXPIRED },
+  });
+
+  const invites = await prisma.invite.findMany({
+    where: {
+      email: { equals: email, mode: 'insensitive' },
+      status: InviteStatus.PENDING,
+      expiresAt: { gt: now },
+    },
+    select: {
+      id: true,
+      token: true,
+      email: true,
+      status: true,
+      expiresAt: true,
+      createdAt: true,
+      group: { select: { id: true, name: true, description: true } },
+    },
+    orderBy: { createdAt: 'desc' },
+  });
+
+  return invites.map((invite) => ({ ...invite, inviteUrl: buildInviteUrl(invite.token) }));
 }
 
 export async function getInviteByToken(token: string) {

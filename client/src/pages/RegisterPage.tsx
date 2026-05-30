@@ -2,11 +2,19 @@ import { useState, type FormEvent } from 'react';
 import { Link, Navigate, useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
 
+function getSafeRedirect(redirect: string | null) {
+  if (redirect?.startsWith('/') && !redirect.startsWith('//')) {
+    return redirect;
+  }
+
+  return null;
+}
+
 export function RegisterPage() {
   const { isAuthenticated, isLoading, register } = useAuth();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
-  const returnTo = searchParams.get('returnTo');
+  const returnTo = getSafeRedirect(searchParams.get('returnTo'));
   const inviteToken = searchParams.get('inviteToken');
   const [name, setName] = useState('');
   const [email, setEmail] = useState(searchParams.get('email') ?? '');
@@ -19,7 +27,7 @@ export function RegisterPage() {
   }
 
   if (isAuthenticated) {
-    return <Navigate to="/dashboard" replace />;
+    return <Navigate to={inviteToken ? `/invite/${inviteToken}` : returnTo ?? '/dashboard'} replace />;
   }
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {

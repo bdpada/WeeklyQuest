@@ -1,9 +1,11 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
 import { groupApi } from '../services/groupApi';
+import { inviteApi } from '../services/inviteApi';
 import { questionSetApi } from '../services/questionSetApi';
 import type { Group } from '../types/group';
+import type { PendingInvite } from '../types/invite';
 import type { QuestionSet } from '../types/questionSet';
 
 export function DashboardPage() {
@@ -12,57 +14,104 @@ export function DashboardPage() {
   const [groups, setGroups] = useState<Group[]>([]);
   const [groupsError, setGroupsError] = useState('');
   const [isLoadingGroups, setIsLoadingGroups] = useState(true);
+  const [pendingInvites, setPendingInvites] = useState<PendingInvite[]>([]);
+  const [pendingInvitesError, setPendingInvitesError] = useState('');
+  const [isLoadingPendingInvites, setIsLoadingPendingInvites] = useState(true);
+  const [inviteActionMessage, setInviteActionMessage] = useState('');
+  const [inviteActionError, setInviteActionError] = useState('');
+  const [acceptingInviteToken, setAcceptingInviteToken] = useState<string | null>(null);
   const [visibleQuestionSets, setVisibleQuestionSets] = useState<Record<string, QuestionSet[]>>({});
   const [statuses, setStatuses] = useState<Record<string,string>>({});
 
-  useEffect(() => {
-    void groupApi.list()
-      .then(async (response) => {
-        setGroups(response.groups);
-        const questionSetEntries = await Promise.all(response.groups.map(async (group) => {
-          const questionSetsResponse = await questionSetApi.listForGroup(group.id);
-          return [group.id, questionSetsResponse.questionSets] as const;
-        }));
-        const map = Object.fromEntries(questionSetEntries);
-        setVisibleQuestionSets(map);
-        const statusMap: Record<string,string> = {};
-        for (const sets of Object.values(map)) {
-          for (const qs of sets) {
-            const duePassed = new Date(qs.dueAt).getTime() < Date.now();
-            const submission = qs.submissions?.[0];
-            if (duePassed && qs.status === 'PUBLISHED' && !submission) {
-              statusMap[qs.id] = 'Closed';
-              continue;
-            }
+  const loadGroups = useCallback(async () => {
+    setIsLoadingGroups(true);
+    setGroupsError('');
 
-            if (qs.status === 'SCORED') {
-              statusMap[qs.id] = submission ? 'Results Available' : 'Closed';
-              continue;
-            }
+    try {
+      const response = await groupApi.list();
+      setGroups(response.groups);
+      const questionSetEntries = await Promise.all(response.groups.map(async (group) => {
+        const questionSetsResponse = await questionSetApi.listForGroup(group.id);
+        return [group.id, questionSetsResponse.questionSets] as const;
+      }));
+      const map = Object.fromEntries(questionSetEntries);
+      setVisibleQuestionSets(map);
+      const statusMap: Record<string,string> = {};
+      for (const sets of Object.values(map)) {
+        for (const qs of sets) {
+          const duePassed = new Date(qs.dueAt).getTime() < Date.now();
+          const submission = qs.submissions?.[0];
+          if (duePassed && qs.status === 'PUBLISHED' && !submission) {
+            statusMap[qs.id] = 'Closed';
+            continue;
+          }
 
-            if (qs.status === 'LOCKED') {
-              statusMap[qs.id] = submission ? 'Awaiting Results' : 'Closed';
-              continue;
-            }
+          if (qs.status === 'SCORED') {
+            statusMap[qs.id] = submission ? 'Results Available' : 'Closed';
+            continue;
+          }
 
-            if (!submission) {
-              statusMap[qs.id] = 'Not Started';
-            } else if (submission.status === 'DRAFT') {
-              statusMap[qs.id] = 'Draft';
-            } else {
-              statusMap[qs.id] = 'Submitted';
-            }
+          if (qs.status === 'LOCKED') {
+            statusMap[qs.id] = submission ? 'Awaiting Results' : 'Closed';
+            continue;
+          }
+
+          if (!submission) {
+            statusMap[qs.id] = 'Not Started';
+          } else if (submission.status === 'DRAFT') {
+            statusMap[qs.id] = 'Draft';
+          } else {
+            statusMap[qs.id] = 'Submitted';
           }
         }
-        setStatuses(statusMap);
-      })
-      .catch((error: Error) => setGroupsError(error.message))
-      .finally(() => setIsLoadingGroups(false));
+      }
+      setStatuses(statusMap);
+    } catch (error) {
+      setGroupsError(error instanceof Error ? error.message : 'Unable to load groups');
+    } finally {
+      setIsLoadingGroups(false);
+    }
   }, []);
+
+  const loadPendingInvites = useCallback(async () => {
+    setIsLoadingPendingInvites(true);
+    setPendingInvitesError('');
+
+    try {
+      const response = await inviteApi.listMyPending();
+      setPendingInvites(response.invites);
+    } catch (error) {
+      setPendingInvitesError(error instanceof Error ? error.message : 'Unable to load pending invites');
+    } finally {
+      setIsLoadingPendingInvites(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    void loadGroups();
+    void loadPendingInvites();
+  }, [loadGroups, loadPendingInvites]);
 
   async function handleLogout() {
     await logout();
     navigate('/login', { replace: true });
+  }
+
+  async function handleAcceptInvite(token: string) {
+    setAcceptingInviteToken(token);
+    setInviteActionMessage('');
+    setInviteActionError('');
+
+    try {
+      const response = await inviteApi.acceptByToken(token);
+      setInviteActionMessage(response.group ? `You joined ${response.group.name}.` : 'Invite accepted.');
+      await Promise.all([loadGroups(), loadPendingInvites()]);
+    } catch (error) {
+      setInviteActionError(error instanceof Error ? error.message : 'Unable to accept invite');
+      await loadPendingInvites();
+    } finally {
+      setAcceptingInviteToken(null);
+    }
   }
 
   return (
@@ -87,6 +136,42 @@ export function DashboardPage() {
         {isAdmin ? <Link className="rounded-lg bg-indigo-50 px-4 py-2 font-medium text-indigo-700 hover:bg-indigo-100" to="/admin">Admin</Link> : null}
         <Link className="rounded-lg bg-indigo-50 px-4 py-2 font-medium text-indigo-700 hover:bg-indigo-100" to="/scores">My Scores</Link>
       </nav>
+
+      <div className="mt-8 rounded-lg bg-indigo-50 p-5 ring-1 ring-indigo-100">
+        <h2 className="text-xl font-semibold text-slate-900">Pending invites</h2>
+        {isLoadingPendingInvites ? <p className="mt-3 text-slate-600">Checking for pending invites...</p> : null}
+        {pendingInvitesError ? <p className="mt-3 text-sm font-medium text-red-700">{pendingInvitesError}</p> : null}
+        {!isLoadingPendingInvites && !pendingInvitesError && pendingInvites.length === 0 ? <p className="mt-3 text-slate-600">No pending invites for {user?.email ?? 'your account'}.</p> : null}
+        {inviteActionMessage ? <p className="mt-3 rounded-lg bg-green-50 px-3 py-2 text-sm text-green-700">{inviteActionMessage}</p> : null}
+        {inviteActionError ? <p className="mt-3 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700">{inviteActionError}</p> : null}
+        {pendingInvites.length > 0 ? (
+          <div className="mt-4 grid gap-3">
+            {pendingInvites.map((invite) => (
+              <article className="rounded-lg border border-indigo-100 bg-white p-4" key={invite.id}>
+                <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                  <div>
+                    <h3 className="font-semibold text-slate-900">{invite.group.name}</h3>
+                    <p className="mt-1 text-sm text-slate-600">Invited email: {invite.email}</p>
+                    <p className="mt-1 text-sm text-slate-600">Expires: {new Date(invite.expiresAt).toLocaleString()}</p>
+                    {invite.group.description ? <p className="mt-2 text-sm text-slate-600">{invite.group.description}</p> : null}
+                  </div>
+                  <div className="flex shrink-0 flex-wrap gap-2">
+                    <button
+                      className="rounded-lg bg-indigo-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-indigo-700 disabled:cursor-not-allowed disabled:bg-indigo-300"
+                      type="button"
+                      disabled={acceptingInviteToken === invite.token}
+                      onClick={() => void handleAcceptInvite(invite.token)}
+                    >
+                      {acceptingInviteToken === invite.token ? 'Accepting...' : 'Accept Invite'}
+                    </button>
+                    <Link className="rounded-lg border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700 transition hover:bg-slate-50" to={`/invite/${invite.token}`}>View Invite</Link>
+                  </div>
+                </div>
+              </article>
+            ))}
+          </div>
+        ) : null}
+      </div>
 
       <div className="mt-8 rounded-lg bg-slate-50 p-5 ring-1 ring-slate-200">
         <h2 className="text-xl font-semibold text-slate-900">Your groups</h2>
